@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScanLine, Pill, Network, Sparkles, CheckCircle2, Loader2 } from "lucide-react";
+import { generateAnalysis, getPendingFile, clearPendingFile, saveReport, getSession } from "@/lib/store";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/processing")({
   head: () => ({
@@ -19,10 +21,36 @@ const steps = [
 function Processing() {
   const navigate = useNavigate();
   const [active, setActive] = useState(0);
+  const reportIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!getSession()) {
+      navigate({ to: "/" });
+      return;
+    }
+    const pending = getPendingFile();
+    if (!pending) {
+      // Allow direct nav for demo, generate from a default name
+      const r = generateAnalysis(`demo-${Date.now()}.pdf`);
+      saveReport(r);
+      reportIdRef.current = r.id;
+      return;
+    }
+    const r = generateAnalysis(pending.name);
+    saveReport(r);
+    reportIdRef.current = r.id;
+    clearPendingFile();
+  }, [navigate]);
 
   useEffect(() => {
     if (active >= steps.length) {
-      const t = setTimeout(() => navigate({ to: "/results" }), 600);
+      const t = setTimeout(() => {
+        toast.success("Analysis complete.");
+        navigate({
+          to: "/results",
+          search: reportIdRef.current ? { id: reportIdRef.current } : {},
+        });
+      }, 600);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => setActive((i) => i + 1), 1100);
