@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { Navbar } from "@/components/Navbar";
+import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -67,6 +68,7 @@ function RootComponent() {
     <div className="bg-gradient-mesh min-h-screen">
       <Navbar />
       <Outlet />
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }
