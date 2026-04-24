@@ -1,5 +1,8 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Leaf } from "lucide-react";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Leaf, LogOut } from "lucide-react";
+import { useSession, clearSession } from "@/lib/store";
+import { toast } from "sonner";
+import { useState, useRef, useEffect } from "react";
 
 const links = [
   { to: "/dashboard", label: "Dashboard" },
@@ -11,8 +14,29 @@ const links = [
 export function Navbar() {
   const { location } = useRouterState();
   const path = location.pathname;
+  const navigate = useNavigate();
+  const session = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   // Hide nav on the landing/login screen
   if (path === "/") return null;
+
+  const handleLogout = () => {
+    clearSession();
+    toast.success("Signed out successfully.");
+    navigate({ to: "/" });
+  };
+
+  const initial = (session?.name || session?.email || "A").trim().charAt(0).toUpperCase();
 
   return (
     <header className="sticky top-0 z-40 w-full">
@@ -56,8 +80,30 @@ export function Navbar() {
             >
               New Analysis
             </Link>
-            <div className="ring-primary/20 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-trust text-sm font-semibold text-primary-foreground ring-2">
-              A
+            <div ref={menuRef} className="relative">
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                className="ring-primary/20 transition-smooth flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-trust text-sm font-semibold text-primary-foreground ring-2 hover:scale-105"
+                aria-label="User menu"
+              >
+                {initial}
+              </button>
+              {menuOpen && (
+                <div className="glass shadow-elegant animate-scale-in absolute right-0 top-12 w-60 rounded-2xl p-2">
+                  <div className="border-border border-b px-3 py-2.5">
+                    <div className="truncate text-sm font-semibold">{session?.name ?? "Guest"}</div>
+                    <div className="text-muted-foreground truncate text-xs">
+                      {session?.email ?? "Not signed in"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="hover:bg-danger/10 hover:text-danger transition-smooth mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium"
+                  >
+                    <LogOut className="h-4 w-4" /> Sign out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
