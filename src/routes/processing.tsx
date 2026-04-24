@@ -48,7 +48,7 @@ function Processing() {
         toast.success("Analysis complete.");
         navigate({
           to: "/results",
-          search: reportIdRef.current ? { id: reportIdRef.current } : {},
+          search: { id: reportIdRef.current ?? undefined },
         });
       }, 600);
       return () => clearTimeout(t);
