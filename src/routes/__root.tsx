@@ -1,22 +1,22 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-
+import { Navbar } from "@/components/Navbar";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+    <div className="bg-gradient-mesh flex min-h-screen items-center justify-center px-4">
+      <div className="glass shadow-elegant max-w-md rounded-3xl p-10 text-center">
+        <h1 className="text-gradient-primary text-7xl font-bold">404</h1>
+        <h2 className="mt-3 text-xl font-semibold">Page not found</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          This page doesn't exist. Return to your dashboard to continue.
         </p>
         <div className="mt-6">
           <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            to="/dashboard"
+            className="bg-gradient-primary shadow-elegant transition-smooth inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
           >
-            Go home
+            Go to Dashboard
           </Link>
         </div>
       </div>
@@ -29,21 +29,19 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
-    links: [
+      { title: "AyurSafe — Bridging Ayurveda and Modern Medicine Safely" },
       {
-        rel: "stylesheet",
-        href: appCss,
+        name: "description",
+        content:
+          "AyurSafe is an AI healthcare platform that detects herb-drug interactions between Ayurvedic and modern medicine prescriptions.",
       },
+      { name: "author", content: "AyurSafe" },
+      { property: "og:title", content: "AyurSafe — AI Healthcare Platform" },
+      { property: "og:description", content: "Bridging Ayurveda and Modern Medicine Safely with AI." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -65,5 +63,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  return (
+    <div className="bg-gradient-mesh min-h-screen">
+      <Navbar />
+      <Outlet />
+    </div>
+  );
 }
