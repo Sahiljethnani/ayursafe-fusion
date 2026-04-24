@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ShieldCheck,
@@ -8,10 +8,18 @@ import {
   ArrowRight,
   Brain,
   HeartPulse,
+  Network,
+  Sparkles,
+  Upload,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { getReport, getReports, type Interaction, type Report } from "@/lib/store";
+import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/results")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: typeof search.id === "string" ? (search.id as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Safety Report — AyurSafe" },
@@ -21,51 +29,80 @@ export const Route = createFileRoute("/results")({
   component: Results,
 });
 
-const interactions = [
-  {
-    a: "Ashwagandha",
-    b: "Sertraline",
-    severity: "moderate" as const,
-    icon: Brain,
-    summary:
-      "Ashwagandha may potentiate serotonergic effects, slightly increasing the risk of serotonin syndrome.",
-  },
-  {
-    a: "Brahmi",
-    b: "Phenytoin",
-    severity: "high" as const,
-    icon: HeartPulse,
-    summary:
-      "Brahmi can reduce phenytoin plasma levels via CYP induction, potentially causing breakthrough seizures.",
-  },
-  {
-    a: "Triphala",
-    b: "Metformin",
-    severity: "safe" as const,
-    icon: ShieldCheck,
-    summary: "No clinically significant interaction observed at standard doses.",
-  },
-];
-
-const score = 72;
-const level: "safe" | "moderate" | "high" = score >= 80 ? "safe" : score >= 50 ? "moderate" : "high";
-const ringColor =
-  level === "safe" ? "var(--safe)" : level === "moderate" ? "var(--warn)" : "var(--danger)";
+function pickIcon(i: Interaction) {
+  if (i.severity === "high") return HeartPulse;
+  if (i.severity === "moderate") return Brain;
+  return ShieldCheck;
+}
 
 function Results() {
+  const { id } = Route.useSearch();
+  const navigate = useNavigate();
+  const [report, setReport] = useState<Report | null>(null);
+
+  useEffect(() => {
+    const r = id ? getReport(id) : getReports()[0] ?? null;
+    setReport(r);
+  }, [id]);
+
+  const ringColor = useMemo(() => {
+    if (!report) return "var(--muted)";
+    return report.level === "safe"
+      ? "var(--safe)"
+      : report.level === "moderate"
+        ? "var(--warn)"
+        : "var(--danger)";
+  }, [report]);
+
+  if (!report) {
+    return (
+      <main className="mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-4 py-10">
+        <div className="glass shadow-elegant rounded-3xl p-10 text-center">
+          <div className="bg-gradient-primary shadow-glow mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
+            <Network className="text-primary-foreground h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">No report yet</h1>
+          <p className="mt-2 text-muted-foreground">
+            Upload a prescription to generate your first AI safety report.
+          </p>
+          <button
+            onClick={() => navigate({ to: "/upload" })}
+            className="bg-gradient-primary text-primary-foreground shadow-elegant transition-smooth mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold hover:opacity-95"
+          >
+            <Upload className="h-4 w-4" /> Upload prescription
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const counts = {
+    safe: report.interactions.filter((i) => i.severity === "safe").length,
+    moderate: report.interactions.filter((i) => i.severity === "moderate").length,
+    high: report.interactions.filter((i) => i.severity === "high").length,
+  };
+
   const circumference = 2 * Math.PI * 80;
-  const offset = circumference - (score / 100) * circumference;
+  const offset = circumference - (report.score / 100) * circumference;
+
+  const headline =
+    report.level === "high"
+      ? "High risk — review urgently before dispensing."
+      : report.level === "moderate"
+        ? "Caution advised — review interactions before dispensing."
+        : "Looks safe — no major interactions detected.";
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-fade-up mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <span className="glass text-primary mb-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
-            Report · Apr 24, 2026
+            <Sparkles className="h-3 w-3" /> Report · {report.date}
           </span>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Safety Report</h1>
           <p className="mt-1 text-muted-foreground">
-            AI analysis of 5 medications and 3 herbal supplements.
+            AI analysis of <b>{report.fileName}</b> · {report.interactions.length} interaction
+            {report.interactions.length === 1 ? "" : "s"} reviewed.
           </p>
         </div>
         <Link
@@ -95,7 +132,7 @@ function Results() {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-5xl font-bold tracking-tight">{score}</div>
+            <div className="text-5xl font-bold tracking-tight">{report.score}</div>
             <div className="text-sm text-muted-foreground">/ 100</div>
             <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               Safety Score
@@ -108,18 +145,13 @@ function Results() {
         </div>
 
         <div>
-          <RiskBadge level={level} size="lg" />
-          <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
-            Caution advised — review interactions before dispensing.
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            We detected <b>3 potential interactions</b> across this prescription. One requires immediate
-            attention. Please review the explanations and recommended substitutions below.
-          </p>
+          <RiskBadge level={report.level} size="lg" />
+          <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{headline}</h2>
+          <p className="mt-2 text-muted-foreground">{report.explanation}</p>
           <div className="mt-5 grid grid-cols-3 gap-3">
-            <Stat label="Safe" value={1} tone="safe" />
-            <Stat label="Moderate" value={1} tone="warn" />
-            <Stat label="High risk" value={1} tone="danger" />
+            <Stat label="Safe" value={counts.safe} tone="safe" />
+            <Stat label="Moderate" value={counts.moderate} tone="warn" />
+            <Stat label="High risk" value={counts.high} tone="danger" />
           </div>
         </div>
       </section>
@@ -128,7 +160,8 @@ function Results() {
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold">Detected interactions</h2>
         <div className="grid gap-4 md:grid-cols-2">
-          {interactions.map((i) => {
+          {report.interactions.map((i, idx) => {
+            const Icon = pickIcon(i);
             const tone =
               i.severity === "high"
                 ? "border-danger/30 bg-danger/5"
@@ -137,13 +170,13 @@ function Results() {
                   : "border-safe/30 bg-safe/5";
             return (
               <div
-                key={`${i.a}-${i.b}`}
+                key={`${i.a}-${i.b}-${idx}`}
                 className={`glass shadow-card hover-lift rounded-3xl border p-6 ${tone}`}
               >
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="bg-card flex h-11 w-11 items-center justify-center rounded-xl shadow-card">
-                      <i.icon className="text-foreground h-5 w-5" strokeWidth={2.2} />
+                      <Icon className="text-foreground h-5 w-5" strokeWidth={2.2} />
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-primary inline-flex items-center gap-1 font-semibold">
@@ -173,27 +206,27 @@ function Results() {
           <h2 className="text-lg font-semibold">Why is this risky?</h2>
         </div>
         <ul className="space-y-3 text-sm text-foreground/85">
-          <li className="flex gap-3">
-            <AlertTriangle className="text-danger mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              <b>Brahmi + Phenytoin:</b> Brahmi induces hepatic CYP3A4, accelerating phenytoin
-              metabolism. Plasma levels can fall below the therapeutic window within 2 weeks.
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <AlertTriangle className="text-warn mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              <b>Ashwagandha + Sertraline:</b> Both modulate serotonergic pathways. Combined use
-              warrants monitoring for tremor, agitation, or hyperreflexia.
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <ShieldCheck className="text-safe mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              <b>Triphala + Metformin:</b> Co-administration is well-tolerated. Some studies suggest
-              modest glycemic benefit.
-            </span>
-          </li>
+          {report.interactions.map((i, idx) => {
+            const Icon =
+              i.severity === "high" ? AlertTriangle : i.severity === "moderate" ? AlertTriangle : ShieldCheck;
+            const color =
+              i.severity === "high"
+                ? "text-danger"
+                : i.severity === "moderate"
+                  ? "text-warn-foreground"
+                  : "text-safe";
+            return (
+              <li key={`${i.a}-${i.b}-${idx}-x`} className="flex gap-3">
+                <Icon className={`${color} mt-0.5 h-4 w-4 shrink-0`} />
+                <span>
+                  <b>
+                    {i.a} + {i.b}:
+                  </b>{" "}
+                  {i.summary}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </main>
