@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Leaf, Sparkles, ShieldCheck, Activity, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { getSession, setSession } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,6 +20,50 @@ export const Route = createFileRoute("/")({
 function Landing() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Auto-redirect if already signed in
+  useEffect(() => {
+    if (getSession()) navigate({ to: "/dashboard" });
+  }, [navigate]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    if (mode === "signup" && !name.trim()) {
+      toast.error("Please enter your full name.");
+      return;
+    }
+
+    setSubmitting(true);
+    setTimeout(() => {
+      const displayName =
+        mode === "signup"
+          ? name.trim()
+          : trimmedEmail
+              .split("@")[0]
+              .replace(/[._-]+/g, " ")
+              .replace(/\b\w/g, (c) => c.toUpperCase());
+      setSession({ email: trimmedEmail, name: displayName, loggedInAt: Date.now() });
+      toast.success(mode === "signin" ? `Welcome back, ${displayName}!` : `Welcome to AyurSafe, ${displayName}!`);
+      navigate({ to: "/dashboard" });
+    }, 600);
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -127,22 +173,40 @@ function Landing() {
 
             <form
               className="mt-7 space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate({ to: "/dashboard" });
-              }}
+              onSubmit={handleSubmit}
             >
               {mode === "signup" && (
-                <Field label="Full name" type="text" placeholder="Dr. Asha Patel" />
+                <Field
+                  label="Full name"
+                  type="text"
+                  placeholder="Dr. Asha Patel"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               )}
-              <Field label="Email" type="email" placeholder="you@clinic.com" />
-              <Field label="Password" type="password" placeholder="••••••••" />
+              <Field
+                label="Email"
+                type="email"
+                placeholder="you@clinic.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+              />
+              <Field
+                label="Password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              />
 
               <button
                 type="submit"
-                className="bg-gradient-primary text-primary-foreground shadow-elegant transition-smooth group flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold hover:opacity-95"
+                disabled={submitting}
+                className="bg-gradient-primary text-primary-foreground shadow-elegant transition-smooth group flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold hover:opacity-95 disabled:opacity-60"
               >
-                {mode === "signin" ? "Sign in" : "Create account"}
+                {submitting ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </button>
 
