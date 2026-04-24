@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as ResultsRouteImport } from './routes/results'
+import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as ProcessingRouteImport } from './routes/processing'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -25,9 +27,19 @@ const ResultsRoute = ResultsRouteImport.update({
   path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecommendationsRoute = RecommendationsRouteImport.update({
+  id: '/recommendations',
+  path: '/recommendations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProcessingRoute = ProcessingRouteImport.update({
   id: '/processing',
   path: '/processing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -44,14 +56,18 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
   '/processing': typeof ProcessingRoute
+  '/recommendations': typeof RecommendationsRoute
   '/results': typeof ResultsRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
   '/processing': typeof ProcessingRoute
+  '/recommendations': typeof RecommendationsRoute
   '/results': typeof ResultsRoute
   '/upload': typeof UploadRoute
 }
@@ -59,22 +75,48 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
   '/processing': typeof ProcessingRoute
+  '/recommendations': typeof RecommendationsRoute
   '/results': typeof ResultsRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/processing' | '/results' | '/upload'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/history'
+    | '/processing'
+    | '/recommendations'
+    | '/results'
+    | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/processing' | '/results' | '/upload'
-  id: '__root__' | '/' | '/dashboard' | '/processing' | '/results' | '/upload'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/history'
+    | '/processing'
+    | '/recommendations'
+    | '/results'
+    | '/upload'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/history'
+    | '/processing'
+    | '/recommendations'
+    | '/results'
+    | '/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  HistoryRoute: typeof HistoryRoute
   ProcessingRoute: typeof ProcessingRoute
+  RecommendationsRoute: typeof RecommendationsRoute
   ResultsRoute: typeof ResultsRoute
   UploadRoute: typeof UploadRoute
 }
@@ -95,11 +137,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recommendations': {
+      id: '/recommendations'
+      path: '/recommendations'
+      fullPath: '/recommendations'
+      preLoaderRoute: typeof RecommendationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/processing': {
       id: '/processing'
       path: '/processing'
       fullPath: '/processing'
       preLoaderRoute: typeof ProcessingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -122,7 +178,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  HistoryRoute: HistoryRoute,
   ProcessingRoute: ProcessingRoute,
+  RecommendationsRoute: RecommendationsRoute,
   ResultsRoute: ResultsRoute,
   UploadRoute: UploadRoute,
 }
