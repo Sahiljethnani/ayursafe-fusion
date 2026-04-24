@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Upload,
   GitCompare,
@@ -10,6 +10,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { useSession, useReports } from "@/lib/store";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -45,13 +47,42 @@ const actions = [
   },
 ] as const;
 
-const recent = [
-  { id: "r1", title: "Ashwagandha + Sertraline", level: "moderate" as const, when: "2h ago" },
-  { id: "r2", title: "Triphala + Metformin", level: "safe" as const, when: "Yesterday" },
-  { id: "r3", title: "Brahmi + Phenytoin", level: "high" as const, when: "2 days ago" },
-];
-
 function Dashboard() {
+  const navigate = useNavigate();
+  const session = useSession();
+  const reports = useReports();
+
+  useEffect(() => {
+    // Guard: redirect to login if no session
+    if (typeof window !== "undefined" && !window.localStorage.getItem("ayursafe.session")) {
+      navigate({ to: "/" });
+    }
+  }, [navigate]);
+
+  const lastScore = reports[0]?.score;
+  const reportsThisWeek = reports.filter(
+    (r) => Date.now() - r.createdAt < 7 * 24 * 60 * 60 * 1000,
+  ).length;
+  const totalInteractions = reports.reduce((s, r) => s + r.interactions.length, 0);
+  const highRiskCount = reports.reduce(
+    (s, r) => s + r.interactions.filter((i) => i.severity === "high").length,
+    0,
+  );
+  const recent = reports.slice(0, 5);
+  const firstName = (session?.name ?? "there").split(" ")[0];
+
+  const formatWhen = (ts: number) => {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "Just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return "Yesterday";
+    return `${d} days ago`;
+  };
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Welcome */}
@@ -61,7 +92,7 @@ function Dashboard() {
             <Sparkles className="h-3 w-3" /> AI ready
           </span>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Hi Dr. Asha <span className="inline-block animate-pulse">👋</span>
+            Hi {firstName} <span className="inline-block animate-pulse">👋</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
             Here's a snapshot of your recent prescription analyses.
@@ -80,23 +111,23 @@ function Dashboard() {
         <StatCard
           icon={ShieldCheck}
           label="Last safety score"
-          value="72"
+          value={lastScore !== undefined ? String(lastScore) : "—"}
           suffix="/100"
-          trend="+4 vs avg"
+          trend={reports.length > 0 ? `${reports.length} total` : "No reports yet"}
           tone="primary"
         />
         <StatCard
           icon={Activity}
           label="Reports this week"
-          value="12"
-          trend="+3 vs last week"
+          value={String(reportsThisWeek)}
+          trend={`${reports.length} all-time`}
           tone="trust"
         />
         <StatCard
           icon={TrendingUp}
           label="Interactions caught"
-          value="38"
-          trend="9 high-risk"
+          value={String(totalInteractions)}
+          trend={`${highRiskCount} high-risk`}
           tone="danger"
         />
       </section>
@@ -133,19 +164,32 @@ function Dashboard() {
           </Link>
         </div>
         <div className="glass shadow-card divide-border/60 divide-y rounded-2xl">
-          {recent.map((r) => (
-            <Link
-              key={r.id}
-              to="/results"
-              className="hover:bg-muted/40 transition-smooth flex items-center justify-between gap-4 px-5 py-4 first:rounded-t-2xl last:rounded-b-2xl"
-            >
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">{r.title}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{r.when}</div>
-              </div>
-              <RiskBadge level={r.level} size="sm" />
-            </Link>
-          ))}
+          {recent.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <div className="text-muted-foreground text-sm">No analyses yet.</div>
+              <Link
+                to="/upload"
+                className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-semibold hover:underline"
+              >
+                Upload your first prescription <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          ) : (
+            recent.map((r) => (
+              <Link
+                key={r.id}
+                to="/results"
+                search={{ id: r.id }}
+                className="hover:bg-muted/40 transition-smooth flex items-center justify-between gap-4 px-5 py-4 first:rounded-t-2xl last:rounded-b-2xl"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{r.title}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">{formatWhen(r.createdAt)}</div>
+                </div>
+                <RiskBadge level={r.level} size="sm" />
+              </Link>
+            ))
+          )}
         </div>
       </section>
     </main>
