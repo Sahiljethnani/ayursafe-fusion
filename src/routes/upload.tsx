@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
 import { UploadCloud, FileText, X, Sparkles, CheckCircle2 } from "lucide-react";
+import { setPendingFile, getSession } from "@/lib/store";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
@@ -14,6 +16,11 @@ export const Route = createFileRoute("/upload")({
 
 function UploadPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!getSession()) navigate({ to: "/" });
+  }, [navigate]);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -49,7 +56,27 @@ function UploadPage() {
     return () => clearInterval(id);
   }, [file]);
 
-  const onPick = (f: File | null) => f && setFile(f);
+  const onPick = (f: File | null) => {
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) {
+      toast.error("File is too large. Max size is 10MB.");
+      return;
+    }
+    const ok =
+      f.type.startsWith("image/") || f.type === "application/pdf" || /\.(png|jpg|jpeg|pdf)$/i.test(f.name);
+    if (!ok) {
+      toast.error("Unsupported file type. Use PNG, JPG, or PDF.");
+      return;
+    }
+    setFile(f);
+    toast.success("File added — ready for analysis.");
+  };
+
+  const handleAnalyze = () => {
+    if (!file) return;
+    setPendingFile({ name: file.name, size: file.size, type: file.type });
+    navigate({ to: "/processing" });
+  };
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
@@ -147,7 +174,7 @@ function UploadPage() {
 
           <button
             disabled={progress < 100}
-            onClick={() => navigate({ to: "/processing" })}
+            onClick={handleAnalyze}
             className="bg-gradient-primary text-primary-foreground shadow-elegant transition-smooth mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Sparkles className="h-4 w-4" /> Analyze with AI
