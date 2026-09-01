@@ -4,7 +4,7 @@ import { UploadCloud, FileText, X, Sparkles, CheckCircle2 } from "lucide-react";
 import { setPendingFile, getSession } from "@/lib/store";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/upload")({
+export const Route = createFileRoute("/_authenticated/upload")({
   head: () => ({
     meta: [
       { title: "Upload Prescription — AyurSafe" },

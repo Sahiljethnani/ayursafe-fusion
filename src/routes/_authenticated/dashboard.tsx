@@ -13,7 +13,7 @@ import { RiskBadge } from "@/components/RiskBadge";
 import { useSession, useReports } from "@/lib/store";
 import { useEffect } from "react";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — AyurSafe" },

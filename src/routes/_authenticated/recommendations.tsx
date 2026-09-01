@@ -14,7 +14,7 @@ import {
 import { RiskBadge } from "@/components/RiskBadge";
 import { getReport, getReports, type Report } from "@/lib/store";
 
-export const Route = createFileRoute("/recommendations")({
+export const Route = createFileRoute("/_authenticated/recommendations")({
   validateSearch: (search: Record<string, unknown>) => ({
     id: typeof search.id === "string" ? (search.id as string) : undefined,
   }),
