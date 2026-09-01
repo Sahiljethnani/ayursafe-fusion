@@ -13,7 +13,7 @@ import {
 import { analyzePrescription } from "@/lib/analysis.functions";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/processing")({
+export const Route = createFileRoute("/_authenticated/processing")({
   head: () => ({
     meta: [
       { title: "Analyzing prescription — AyurSafe" },

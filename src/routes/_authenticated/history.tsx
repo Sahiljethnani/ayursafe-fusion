@@ -6,7 +6,7 @@ import { useReports, getSession } from "@/lib/store";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/history")({
+export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
     meta: [
       { title: "History — AyurSafe" },
