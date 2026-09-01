@@ -1,32 +1,22 @@
 import { useEffect, useState, useCallback } from "react";
-import type { RiskLevel } from "@/components/RiskBadge";
+import type { AnalysisResult, ExtractedPatient, Recommendation } from "./analysis.functions";
+import type { AnalyzedMedicine, DetectedInteraction, Severity } from "./medical";
 
 const SESSION_KEY = "ayursafe.session";
 const REPORTS_KEY = "ayursafe.reports";
-const PENDING_KEY = "ayursafe.pendingFile";
 
 export type Session = { email: string; name: string; loggedInAt: number };
 
-export type Interaction = {
-  a: string;
-  b: string;
-  severity: RiskLevel;
-  summary: string;
-};
+export type RiskLevel = Severity;
+export type Interaction = DetectedInteraction;
+export type { AnalyzedMedicine, ExtractedPatient, Recommendation };
 
-export type Report = {
+export type Report = AnalysisResult & {
   id: string;
   title: string;
   date: string;
   createdAt: number;
-  fileName: string;
-  score: number;
-  level: RiskLevel;
-  interactions: Interaction[];
-  explanation: string;
 };
-
-export type PendingFile = { name: string; size: number; type: string };
 
 function readJSON<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
@@ -40,7 +30,11 @@ function readJSON<T>(key: string): T | null {
 
 function writeJSON(key: string, value: unknown) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage full — ignore, in-memory state still valid */
+  }
   window.dispatchEvent(new CustomEvent("ayursafe:storage", { detail: { key } }));
 }
 
@@ -79,24 +73,40 @@ export function useSession(): Session | null {
   return session;
 }
 
-/* -------- Pending file (between Upload → Processing → Results) -------- */
+/* -------- Pending upload (Upload → Processing) -------- */
+/* The actual File is kept in memory: it never leaves the browser except as a
+   direct request to our own analysis server function. */
+
+export type PendingFile = { file: File; name: string; size: number; type: string };
+
+let pendingFile: PendingFile | null = null;
 
 export function setPendingFile(f: PendingFile) {
-  writeJSON(PENDING_KEY, f);
+  pendingFile = f;
 }
 
 export function getPendingFile(): PendingFile | null {
-  return readJSON<PendingFile>(PENDING_KEY);
+  return pendingFile;
 }
 
 export function clearPendingFile() {
-  removeKey(PENDING_KEY);
+  pendingFile = null;
+}
+
+export function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Could not read the selected file."));
+    reader.readAsDataURL(file);
+  });
 }
 
 /* -------- Reports -------- */
 
 export function getReports(): Report[] {
-  return readJSON<Report[]>(REPORTS_KEY) ?? [];
+  const all = readJSON<Report[]>(REPORTS_KEY) ?? [];
+  return all.filter((r) => r && Array.isArray(r.interactions) && Array.isArray(r.medicines));
 }
 
 export function saveReport(r: Report) {
@@ -107,6 +117,10 @@ export function saveReport(r: Report) {
 
 export function getReport(id: string): Report | null {
   return getReports().find((r) => r.id === id) ?? null;
+}
+
+export function clearReports() {
+  removeKey(REPORTS_KEY);
 }
 
 export function useReports(): Report[] {
@@ -125,92 +139,22 @@ export function useReports(): Report[] {
   return reports;
 }
 
-/* -------- Simulated AI analysis -------- */
-
-const POOL: Interaction[] = [
-  {
-    a: "Ashwagandha",
-    b: "Sertraline",
-    severity: "moderate",
-    summary:
-      "Ashwagandha may potentiate serotonergic effects, slightly increasing the risk of serotonin syndrome.",
-  },
-  {
-    a: "Brahmi",
-    b: "Phenytoin",
-    severity: "high",
-    summary:
-      "Brahmi can reduce phenytoin plasma levels via CYP induction, potentially causing breakthrough seizures.",
-  },
-  {
-    a: "Triphala",
-    b: "Metformin",
-    severity: "safe",
-    summary: "No clinically significant interaction observed at standard doses.",
-  },
-  {
-    a: "St. John's Wort",
-    b: "Warfarin",
-    severity: "high",
-    summary: "Strongly induces CYP2C9, lowering warfarin levels and INR — bleeding risk on dose changes.",
-  },
-  {
-    a: "Tulsi",
-    b: "Lisinopril",
-    severity: "safe",
-    summary: "Co-administration is well tolerated at culinary and standard supplemental doses.",
-  },
-  {
-    a: "Turmeric",
-    b: "Atorvastatin",
-    severity: "moderate",
-    summary: "High-dose curcumin may inhibit CYP3A4, raising statin exposure — monitor for myalgia.",
-  },
-  {
-    a: "Garlic extract",
-    b: "Aspirin",
-    severity: "moderate",
-    summary: "Both have antiplatelet activity — combined use may extend bleeding time.",
-  },
-];
-
-export function generateAnalysis(fileName: string): Report {
-  // Pick 2–4 interactions deterministically based on the file name
-  const seed = Array.from(fileName).reduce((s, c) => s + c.charCodeAt(0), 0);
-  const count = 2 + (seed % 3); // 2..4
-  const picked: Interaction[] = [];
-  for (let i = 0; i < count; i++) {
-    picked.push(POOL[(seed + i * 3) % POOL.length]);
-  }
-
-  const weights = { safe: 0, moderate: 15, high: 35 };
-  const penalty = picked.reduce((sum, i) => sum + weights[i.severity], 0);
-  const score = Math.max(15, Math.min(98, 100 - penalty + (seed % 10)));
-  const level: RiskLevel = score >= 80 ? "safe" : score >= 50 ? "moderate" : "high";
-
+/** Turn a fresh analysis into a persisted report. */
+export function toReport(result: AnalysisResult): Report {
   const now = new Date();
-  const id = `r_${now.getTime().toString(36)}`;
-  const title = picked
-    .slice(0, 2)
-    .map((p) => `${p.a} + ${p.b}`)
-    .join(", ");
-
-  const explanation =
-    level === "high"
-      ? "Multiple high-severity interactions detected. Review carefully before dispensing — consider substitutions for the flagged items."
-      : level === "moderate"
-        ? "Some moderate interactions were detected. Patient monitoring is recommended; substitutions may be advisable."
-        : "No significant interactions detected. The combination appears safe at standard clinical doses.";
-
+  const names = result.medicines.map((m) => m.canonical ?? m.raw);
+  const title =
+    names.length === 0
+      ? result.fileName
+      : names.length <= 3
+        ? names.join(", ")
+        : `${names.slice(0, 3).join(", ")} +${names.length - 3} more`;
   return {
-    id,
+    ...result,
+    extractedText: result.extractedText.slice(0, 4000),
+    id: `r_${now.getTime().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
     title,
     date: now.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" }),
     createdAt: now.getTime(),
-    fileName,
-    score,
-    level,
-    interactions: picked,
-    explanation,
   };
 }
