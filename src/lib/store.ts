@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
+import type { Session as SupabaseSession, User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, ExtractedPatient, Recommendation } from "./analysis.functions";
 import type { AnalyzedMedicine, DetectedInteraction, Severity } from "./medical";
 
-const SESSION_KEY = "ayursafe.session";
-const REPORTS_KEY = "ayursafe.reports";
-
-export type Session = { email: string; name: string; loggedInAt: number };
+export type Session = { id: string; email: string; name: string };
 
 export type RiskLevel = Severity;
 export type Interaction = DetectedInteraction;
@@ -18,64 +17,59 @@ export type Report = AnalysisResult & {
   createdAt: number;
 };
 
-function readJSON<T>(key: string): T | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
-    return null;
-  }
+/* -------- Session (derived from the auth provider, never local state) -------- */
+
+export function sessionFromUser(user: User | null | undefined): Session | null {
+  if (!user) return null;
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const name =
+    (typeof meta['full_name'] === "string" && meta['full_name']) ||
+    (typeof meta['name'] === "string" && meta['name']) ||
+    (user.email ?? "").split("@")[0] ||
+    "Account";
+  return { id: user.id, email: user.email ?? "", name: String(name) };
 }
 
-function writeJSON(key: string, value: unknown) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage full — ignore, in-memory state still valid */
-  }
-  window.dispatchEvent(new CustomEvent("ayursafe:storage", { detail: { key } }));
-}
+/** Reactive auth state backed by the auth provider's session. */
+export function useAuth(): { session: Session | null; loading: boolean } {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-function removeKey(key: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(key);
-  window.dispatchEvent(new CustomEvent("ayursafe:storage", { detail: { key } }));
-}
+  useEffect(() => {
+    let mounted = true;
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s: SupabaseSession | null) => {
+      if (!mounted) return;
+      setSession(sessionFromUser(s?.user ?? null));
+      setLoading(false);
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setSession(sessionFromUser(data.session?.user ?? null));
+      setLoading(false);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
-/* -------- Session -------- */
-
-export function getSession(): Session | null {
-  return readJSON<Session>(SESSION_KEY);
-}
-
-export function setSession(s: Session) {
-  writeJSON(SESSION_KEY, s);
-}
-
-export function clearSession() {
-  removeKey(SESSION_KEY);
+  return { session, loading };
 }
 
 export function useSession(): Session | null {
-  const [session, setSessionState] = useState<Session | null>(null);
-  useEffect(() => {
-    setSessionState(getSession());
-    const onChange = () => setSessionState(getSession());
-    window.addEventListener("ayursafe:storage", onChange);
-    window.addEventListener("storage", onChange);
-    return () => {
-      window.removeEventListener("ayursafe:storage", onChange);
-      window.removeEventListener("storage", onChange);
-    };
-  }, []);
-  return session;
+  return useAuth().session;
+}
+
+export async function getSession(): Promise<Session | null> {
+  const { data } = await supabase.auth.getUser();
+  return sessionFromUser(data.user);
+}
+
+export async function signOut() {
+  await supabase.auth.signOut();
 }
 
 /* -------- Pending upload (Upload → Processing) -------- */
-/* The actual File is kept in memory: it never leaves the browser except as a
-   direct request to our own analysis server function. */
 
 export type PendingFile = { file: File; name: string; size: number; type: string };
 
@@ -102,59 +96,101 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-/* -------- Reports -------- */
+/* -------- Reports (stored per-user in the database, protected by RLS) -------- */
 
-export function getReports(): Report[] {
-  const all = readJSON<Report[]>(REPORTS_KEY) ?? [];
-  return all.filter((r) => r && Array.isArray(r.interactions) && Array.isArray(r.medicines));
+type ReportRow = {
+  id: string;
+  title: string;
+  created_at: string;
+  data: unknown;
+};
+
+function rowToReport(row: ReportRow): Report | null {
+  const data = row.data as AnalysisResult | null;
+  if (!data || !Array.isArray(data.interactions) || !Array.isArray(data.medicines)) return null;
+  const created = new Date(row.created_at);
+  return {
+    ...data,
+    id: row.id,
+    title: row.title,
+    date: created.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" }),
+    createdAt: created.getTime(),
+  };
 }
 
-export function saveReport(r: Report) {
-  const all = getReports();
-  all.unshift(r);
-  writeJSON(REPORTS_KEY, all.slice(0, 50));
+function titleFor(result: AnalysisResult): string {
+  const names = result.medicines.map((m) => m.canonical ?? m.raw);
+  if (names.length === 0) return result.fileName;
+  return names.length <= 3
+    ? names.join(", ")
+    : `${names.slice(0, 3).join(", ")} +${names.length - 3} more`;
 }
 
-export function getReport(id: string): Report | null {
-  return getReports().find((r) => r.id === id) ?? null;
+export async function getReports(): Promise<Report[]> {
+  const { data, error } = await supabase
+    .from("reports")
+    .select("id, title, created_at, data")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error || !data) return [];
+  return (data as ReportRow[]).map(rowToReport).filter((r): r is Report => r !== null);
 }
 
-export function clearReports() {
-  removeKey(REPORTS_KEY);
+export async function getReport(id: string): Promise<Report | null> {
+  const { data, error } = await supabase
+    .from("reports")
+    .select("id, title, created_at, data")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return rowToReport(data as ReportRow);
 }
 
-export function useReports(): Report[] {
+/** Persist a fresh analysis for the signed-in user. */
+export async function saveReport(result: AnalysisResult): Promise<Report> {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Your session expired. Please sign in again.");
+
+  const payload: AnalysisResult = { ...result, extractedText: result.extractedText.slice(0, 4000) };
+  const { data, error } = await supabase
+    .from("reports")
+    .insert({
+      user_id: userId,
+      title: titleFor(result),
+      file_name: result.fileName,
+      safety_score: Math.round(result.score),
+      data: payload as unknown as never,
+    })
+    .select("id, title, created_at, data")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Could not save this report.");
+  const report = rowToReport(data as ReportRow);
+  if (!report) throw new Error("Could not save this report.");
+  return report;
+}
+
+export function useReports(): { reports: Report[]; loading: boolean; refresh: () => void } {
   const [reports, setReports] = useState<Report[]>([]);
-  const refresh = useCallback(() => setReports(getReports()), []);
+  const [loading, setLoading] = useState(true);
+  const { session } = useAuth();
+
+  const refresh = useCallback(() => {
+    if (!session) {
+      setReports([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    getReports()
+      .then(setReports)
+      .finally(() => setLoading(false));
+  }, [session]);
+
   useEffect(() => {
     refresh();
-    const onChange = () => refresh();
-    window.addEventListener("ayursafe:storage", onChange);
-    window.addEventListener("storage", onChange);
-    return () => {
-      window.removeEventListener("ayursafe:storage", onChange);
-      window.removeEventListener("storage", onChange);
-    };
   }, [refresh]);
-  return reports;
-}
 
-/** Turn a fresh analysis into a persisted report. */
-export function toReport(result: AnalysisResult): Report {
-  const now = new Date();
-  const names = result.medicines.map((m) => m.canonical ?? m.raw);
-  const title =
-    names.length === 0
-      ? result.fileName
-      : names.length <= 3
-        ? names.join(", ")
-        : `${names.slice(0, 3).join(", ")} +${names.length - 3} more`;
-  return {
-    ...result,
-    extractedText: result.extractedText.slice(0, 4000),
-    id: `r_${now.getTime().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-    title,
-    date: now.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" }),
-    createdAt: now.getTime(),
-  };
+  return { reports, loading, refresh };
 }
