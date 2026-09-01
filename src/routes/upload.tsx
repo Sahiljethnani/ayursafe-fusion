@@ -58,8 +58,8 @@ function UploadPage() {
 
   const onPick = (f: File | null) => {
     if (!f) return;
-    if (f.size > 10 * 1024 * 1024) {
-      toast.error("File is too large. Max size is 10MB.");
+    if (f.size > 8 * 1024 * 1024) {
+      toast.error("File is too large. Max size is 8MB.");
       return;
     }
     const ok =
@@ -74,7 +74,7 @@ function UploadPage() {
 
   const handleAnalyze = () => {
     if (!file) return;
-    setPendingFile({ name: file.name, size: file.size, type: file.type });
+    setPendingFile({ file, name: file.name, size: file.size, type: file.type });
     navigate({ to: "/processing" });
   };
 
@@ -118,7 +118,7 @@ function UploadPage() {
         </div>
         <h3 className="text-lg font-semibold">Drag & drop your prescription</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          or <span className="text-primary font-medium">click to browse</span> · PNG, JPG, PDF up to 10MB
+          or <span className="text-primary font-medium">click to browse</span> · PNG, JPG, PDF up to 8MB
         </p>
       </div>
 

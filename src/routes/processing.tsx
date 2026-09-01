@@ -1,61 +1,124 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ScanLine, Pill, Network, Sparkles, CheckCircle2, Loader2 } from "lucide-react";
-import { generateAnalysis, getPendingFile, clearPendingFile, saveReport, getSession } from "@/lib/store";
+import { useServerFn } from "@tanstack/react-start";
+import { ScanLine, Pill, Network, Sparkles, CheckCircle2, Loader2, AlertTriangle, Upload } from "lucide-react";
+import {
+  getPendingFile,
+  clearPendingFile,
+  saveReport,
+  getSession,
+  fileToDataUrl,
+  toReport,
+} from "@/lib/store";
+import { analyzePrescription } from "@/lib/analysis.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/processing")({
   head: () => ({
-    meta: [{ title: "Analyzing — AyurSafe" }],
+    meta: [
+      { title: "Analyzing prescription — AyurSafe" },
+      { name: "description", content: "AyurSafe is running OCR, entity extraction and interaction analysis." },
+      { property: "og:title", content: "Analyzing prescription — AyurSafe" },
+      { property: "og:description", content: "OCR, entity extraction and herb-drug interaction analysis in progress." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: Processing,
 });
 
 const steps = [
-  { icon: ScanLine, title: "Extracting prescription", desc: "OCR · reading text from your image" },
-  { icon: Pill, title: "Identifying drugs & herbs", desc: "NLP · matching to clinical entities" },
-  { icon: Network, title: "Checking interactions", desc: "Knowledge graph traversal" },
-  { icon: Sparkles, title: "Generating recommendations", desc: "AI clinical reasoning" },
+  { icon: ScanLine, title: "Extracting prescription", desc: "OCR · reading text from your document" },
+  { icon: Pill, title: "Identifying drugs & herbs", desc: "Normalizing to clinical entities" },
+  { icon: Network, title: "Checking interactions", desc: "Knowledge base + clinical reasoning" },
+  { icon: Sparkles, title: "Generating recommendations", desc: "Scoring and safer alternatives" },
 ] as const;
 
 function Processing() {
   const navigate = useNavigate();
+  const analyze = useServerFn(analyzePrescription);
   const [active, setActive] = useState(0);
-  const reportIdRef = useRef<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const doneIdRef = useRef<string | null>(null);
+  const [finished, setFinished] = useState(false);
+  const startedRef = useRef(false);
 
   useEffect(() => {
     if (!getSession()) {
       navigate({ to: "/" });
       return;
     }
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     const pending = getPendingFile();
     if (!pending) {
-      // Allow direct nav for demo, generate from a default name
-      const r = generateAnalysis(`demo-${Date.now()}.pdf`);
-      saveReport(r);
-      reportIdRef.current = r.id;
+      setError("No prescription file found. Please upload a prescription to analyze.");
       return;
     }
-    const r = generateAnalysis(pending.name);
-    saveReport(r);
-    reportIdRef.current = r.id;
-    clearPendingFile();
-  }, [navigate]);
 
+    (async () => {
+      try {
+        const dataUrl = await fileToDataUrl(pending.file);
+        const result = await analyze({
+          data: { fileName: pending.name, mimeType: pending.type || "application/octet-stream", dataUrl },
+        });
+        const report = toReport(result);
+        saveReport(report);
+        clearPendingFile();
+        doneIdRef.current = report.id;
+        setFinished(true);
+      } catch (err) {
+        clearPendingFile();
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : "Analysis failed. Please try again with a clearer prescription image.";
+        setError(message);
+      }
+    })();
+  }, [navigate, analyze]);
+
+  // Step animation: hold on the last step until the real analysis resolves.
   useEffect(() => {
-    if (active >= steps.length) {
+    if (error) return;
+    if (finished && active >= steps.length) {
       const t = setTimeout(() => {
         toast.success("Analysis complete.");
-        navigate({
-          to: "/results",
-          search: { id: reportIdRef.current ?? undefined },
-        });
-      }, 600);
+        navigate({ to: "/results", search: { id: doneIdRef.current ?? undefined } });
+      }, 500);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setActive((i) => i + 1), 1100);
+    const cap = finished ? steps.length : steps.length - 1;
+    if (active >= cap) return;
+    const t = setTimeout(() => setActive((i) => i + 1), finished ? 350 : 1200);
     return () => clearTimeout(t);
-  }, [active, navigate]);
+  }, [active, finished, error, navigate]);
+
+  if (error) {
+    return (
+      <main className="mx-auto flex min-h-[80vh] max-w-2xl flex-col items-center justify-center px-4 py-10">
+        <div className="glass shadow-elegant animate-scale-in w-full rounded-3xl p-8 text-center sm:p-12">
+          <div className="bg-danger/15 text-danger mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
+            <AlertTriangle className="h-7 w-7" strokeWidth={2.2} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">We couldn't analyze this prescription</h1>
+          <p className="mt-3 text-sm text-muted-foreground">{error}</p>
+          <ul className="text-muted-foreground mx-auto mt-5 max-w-sm space-y-1.5 text-left text-xs">
+            <li>· Capture the entire prescription, edge to edge.</li>
+            <li>· Avoid glare, shadows and blur — good lighting helps OCR.</li>
+            <li>· PDFs should contain the prescription page, not a cover sheet.</li>
+          </ul>
+          <button
+            onClick={() => navigate({ to: "/upload" })}
+            className="bg-gradient-primary text-primary-foreground shadow-elegant transition-smooth mt-7 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold hover:opacity-95"
+          >
+            <Upload className="h-4 w-4" /> Try another upload
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   const progress = Math.min(100, (active / steps.length) * 100);
   const circumference = 2 * Math.PI * 52;
@@ -66,14 +129,7 @@ function Processing() {
       <div className="glass shadow-elegant animate-scale-in w-full rounded-3xl p-8 text-center sm:p-12">
         <div className="relative mx-auto mb-8 h-32 w-32">
           <svg className="-rotate-90 h-32 w-32" viewBox="0 0 120 120">
-            <circle
-              cx="60"
-              cy="60"
-              r="52"
-              stroke="var(--muted)"
-              strokeWidth="10"
-              fill="none"
-            />
+            <circle cx="60" cy="60" r="52" stroke="var(--muted)" strokeWidth="10" fill="none" />
             <circle
               cx="60"
               cy="60"
@@ -106,7 +162,8 @@ function Processing() {
           AyurSafe AI is analyzing your prescription
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This usually takes a few seconds. Please don't close the window.
+          Reading the document, matching medicines and checking every combination. Please don't close the
+          window.
         </p>
 
         <div className="mt-8 space-y-3 text-left">
