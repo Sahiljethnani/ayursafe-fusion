@@ -160,6 +160,8 @@ export async function saveReport(result: AnalysisResult): Promise<Report> {
       title: titleFor(result),
       file_name: result.fileName,
       safety_score: Math.round(result.score),
+      risk_level: result.level,
+      status: "complete",
       data: payload as unknown as never,
     })
     .select("id, title, created_at, data")
