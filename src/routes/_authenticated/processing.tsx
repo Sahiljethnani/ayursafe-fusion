@@ -44,10 +44,6 @@ function Processing() {
   const startedRef = useRef(false);
 
   useEffect(() => {
-    if (!getSession()) {
-      navigate({ to: "/" });
-      return;
-    }
     if (startedRef.current) return;
     startedRef.current = true;
 
