@@ -2,14 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ScanLine, Pill, Network, Sparkles, CheckCircle2, Loader2, AlertTriangle, Upload } from "lucide-react";
-import {
-  getPendingFile,
-  clearPendingFile,
-  saveReport,
-  getSession,
-  fileToDataUrl,
-  toReport,
-} from "@/lib/store";
+import { getPendingFile, clearPendingFile, saveReport, fileToDataUrl } from "@/lib/store";
 import { analyzePrescription } from "@/lib/analysis.functions";
 import { toast } from "sonner";
 
@@ -59,8 +52,7 @@ function Processing() {
         const result = await analyze({
           data: { fileName: pending.name, mimeType: pending.type || "application/octet-stream", dataUrl },
         });
-        const report = toReport(result);
-        saveReport(report);
+        const report = await saveReport(result);
         clearPendingFile();
         doneIdRef.current = report.id;
         setFinished(true);
