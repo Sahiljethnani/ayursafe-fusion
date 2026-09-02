@@ -48,16 +48,9 @@ const actions = [
 ] as const;
 
 function Dashboard() {
-  const navigate = useNavigate();
   const session = useSession();
-  const reports = useReports();
+  const { reports } = useReports();
 
-  useEffect(() => {
-    // Guard: redirect to login if no session
-    if (typeof window !== "undefined" && !window.localStorage.getItem("ayursafe.session")) {
-      navigate({ to: "/" });
-    }
-  }, [navigate]);
 
   const lastScore = reports[0]?.score;
   const reportsThisWeek = reports.filter(
