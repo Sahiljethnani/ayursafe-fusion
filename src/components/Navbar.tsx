@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { Leaf, LogOut } from "lucide-react";
-import { useSession, clearSession } from "@/lib/store";
+import { useSession, signOut } from "@/lib/store";
 import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
 
@@ -30,8 +30,8 @@ export function Navbar() {
   // Hide nav on the landing/login screen
   if (path === "/") return null;
 
-  const handleLogout = () => {
-    clearSession();
+  const handleLogout = async () => {
+    await signOut();
     toast.success("Signed out successfully.");
     navigate({ to: "/" });
   };

@@ -37,7 +37,14 @@ function Recommendations() {
   const [report, setReport] = useState<Report | null>(null);
 
   useEffect(() => {
-    setReport(id ? getReport(id) : (getReports()[0] ?? null));
+    let active = true;
+    (async () => {
+      const r = id ? await getReport(id) : ((await getReports())[0] ?? null);
+      if (active) setReport(r);
+    })();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   if (!report) {
