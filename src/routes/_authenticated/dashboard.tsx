@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Upload,
   GitCompare,
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
 import { useSession, useReports } from "@/lib/store";
-import { useEffect } from "react";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
