@@ -171,6 +171,15 @@ export async function saveReport(result: AnalysisResult): Promise<Report> {
   return report;
 }
 
+/** Delete every report owned by the signed-in user (RLS scopes the delete). */
+export async function deleteAllReports(): Promise<{ error: Error | null }> {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) return { error: new Error("Not signed in.") };
+  const { error } = await supabase.from("reports").delete().eq("user_id", userId);
+  return { error: error ? new Error(error.message) : null };
+}
+
 export function useReports(): { reports: Report[]; loading: boolean; refresh: () => void } {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);

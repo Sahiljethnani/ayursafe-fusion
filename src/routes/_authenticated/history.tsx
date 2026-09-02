@@ -1,9 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, FileText, Search, Upload, Trash2 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
 import { useState } from "react";
-import { useReports, getSession } from "@/lib/store";
-import { useEffect } from "react";
+import { useReports, deleteAllReports } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/history")({
@@ -17,13 +16,8 @@ export const Route = createFileRoute("/_authenticated/history")({
 });
 
 function HistoryPage() {
-  const navigate = useNavigate();
-  const reports = useReports();
+  const { reports, refresh } = useReports();
   const [q, setQ] = useState("");
-
-  useEffect(() => {
-    if (!getSession()) navigate({ to: "/" });
-  }, [navigate]);
 
   const filtered = reports.filter(
     (r) =>
@@ -31,12 +25,14 @@ function HistoryPage() {
       r.fileName.toLowerCase().includes(q.toLowerCase()),
   );
 
-  const handleClear = () => {
+  const handleClear = async () => {
     if (!confirm("Clear all history? This cannot be undone.")) return;
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("ayursafe.reports");
-      window.dispatchEvent(new CustomEvent("ayursafe:storage", { detail: { key: "ayursafe.reports" } }));
+    const { error } = await deleteAllReports();
+    if (error) {
+      toast.error("Could not clear history. Please try again.");
+      return;
     }
+    refresh();
     toast.success("History cleared.");
   };
 

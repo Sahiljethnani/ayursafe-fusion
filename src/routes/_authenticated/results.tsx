@@ -51,9 +51,16 @@ function Results() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const r = id ? getReport(id) : (getReports()[0] ?? null);
-    setReport(r);
-    setReady(true);
+    let active = true;
+    (async () => {
+      const r = id ? await getReport(id) : ((await getReports())[0] ?? null);
+      if (!active) return;
+      setReport(r);
+      setReady(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const ringColor = useMemo(() => {
