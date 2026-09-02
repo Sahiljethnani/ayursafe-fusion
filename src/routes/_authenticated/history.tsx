@@ -1,9 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, FileText, Search, Upload, Trash2 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
 import { useState } from "react";
-import { useReports, getSession } from "@/lib/store";
-import { useEffect } from "react";
+import { useReports, deleteAllReports } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/history")({
