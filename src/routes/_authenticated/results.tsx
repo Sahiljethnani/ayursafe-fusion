@@ -17,8 +17,10 @@ import {
   Activity,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { getReport, getReports, type Interaction, type Report } from "@/lib/store";
 import { useEffect, useMemo, useState } from "react";
+
 
 export const Route = createFileRoute("/_authenticated/results")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -49,6 +51,31 @@ function Results() {
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
   const [ready, setReady] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
+
+  const graphHerbs = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (report?.medicines ?? [])
+            .filter((m) => m.kind === "herb")
+            .map((m) => m.canonical ?? m.raw),
+        ),
+      ),
+    [report],
+  );
+  const graphDrugs = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (report?.medicines ?? [])
+            .filter((m) => m.kind === "drug")
+            .map((m) => m.canonical ?? m.raw),
+        ),
+      ),
+    [report],
+  );
+
 
   useEffect(() => {
     let active = true;
@@ -283,6 +310,24 @@ function Results() {
           </ul>
         </div>
       </section>
+
+      {/* Knowledge graph */}
+      <section className="mb-8">
+        <button
+          onClick={() => setShowGraph((v) => !v)}
+          className="glass shadow-card transition-smooth hover-lift mb-4 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
+        >
+          <Network className="text-primary h-4 w-4" />
+          {showGraph ? "Hide Interaction Knowledge Graph" : "View Interaction Knowledge Graph"}
+        </button>
+        {showGraph && (
+          <div className="animate-fade-up">
+            <KnowledgeGraph herbs={graphHerbs} drugs={graphDrugs} />
+          </div>
+        )}
+      </section>
+
+
 
       {/* Interactions */}
       <section className="mb-8">
