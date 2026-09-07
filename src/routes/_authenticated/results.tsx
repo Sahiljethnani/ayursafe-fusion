@@ -51,6 +51,31 @@ function Results() {
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
   const [ready, setReady] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
+
+  const graphHerbs = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (report?.medicines ?? [])
+            .filter((m) => m.kind === "herb")
+            .map((m) => m.canonical ?? m.raw),
+        ),
+      ),
+    [report],
+  );
+  const graphDrugs = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (report?.medicines ?? [])
+            .filter((m) => m.kind === "drug")
+            .map((m) => m.canonical ?? m.raw),
+        ),
+      ),
+    [report],
+  );
+
 
   useEffect(() => {
     let active = true;
