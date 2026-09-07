@@ -17,8 +17,10 @@ import {
   Activity,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { getReport, getReports, type Interaction, type Report } from "@/lib/store";
 import { useEffect, useMemo, useState } from "react";
+
 
 export const Route = createFileRoute("/_authenticated/results")({
   validateSearch: (search: Record<string, unknown>) => ({
