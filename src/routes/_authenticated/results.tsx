@@ -286,6 +286,24 @@ function Results() {
         </div>
       </section>
 
+      {/* Knowledge graph */}
+      <section className="mb-8">
+        <button
+          onClick={() => setShowGraph((v) => !v)}
+          className="glass shadow-card transition-smooth hover-lift mb-4 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
+        >
+          <Network className="text-primary h-4 w-4" />
+          {showGraph ? "Hide Interaction Knowledge Graph" : "View Interaction Knowledge Graph"}
+        </button>
+        {showGraph && (
+          <div className="animate-fade-up">
+            <KnowledgeGraph herbs={graphHerbs} drugs={graphDrugs} />
+          </div>
+        )}
+      </section>
+
+
+
       {/* Interactions */}
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold">Detected interactions</h2>
