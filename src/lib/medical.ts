@@ -316,7 +316,21 @@ export type DetectedInteraction = {
   kind: InteractionKind;
   summary: string;
   advice: string;
-  source: "knowledge-base" | "ai";
+  source: "knowledge-base" | "ai" | "evidence-table";
+  /** Present only for HDI results — traceable record from the Master HDI Evidence Table. */
+  evidence?: {
+    id: number;
+    herb: string;
+    botanical: string;
+    drug: string;
+    mechanism: string;
+    direction: string;
+    outcome: string;
+    evidenceLevel: string;
+    references: string;
+    riskLevel: string;
+    category: "confirmed" | "mixed" | "no-effect";
+  };
 };
 
 /** Run the rule base over the medicines actually extracted from this prescription. */
@@ -337,6 +351,8 @@ export function findInteractions(
       const m2 = known[j];
       if (m1.canonical === m2.canonical) continue;
       for (const rule of INTERACTION_RULES) {
+        // Herb-drug interactions come ONLY from the Master HDI Evidence Table (see hdi.ts).
+        if (rule.kind === "herb-drug") continue;
         const hit =
           (matches(rule.left, m1) && matches(rule.right, m2)) ||
           (matches(rule.left, m2) && matches(rule.right, m1));
