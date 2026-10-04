@@ -9,6 +9,7 @@ import {
   type DetectedInteraction,
   type Severity,
 } from "./medical";
+import { evaluateHdi, isEvidenceHerb } from "./hdi";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-3.6-flash";
@@ -266,6 +267,36 @@ export const analyzePrescription = createServerFn({ method: "POST" })
     /* ---- Knowledge-base pass ---- */
     const kbInteractions = findInteractions(medicines, patient.conditions, patient.allergies);
 
+    /* ---- Evidence-based HDI pass: deterministic match against the 30-record Master table ---- */
+    const isHerb = (m: AnalyzedMedicine) => m.kind === "herb" || isEvidenceHerb(m.canonical ?? m.raw);
+    const herbNames = medicines.filter(isHerb).map((m) => m.canonical ?? m.raw);
+    const drugNames = medicines.filter((m) => !isHerb(m)).map((m) => m.canonical ?? m.raw);
+    const hdi = evaluateHdi(herbNames, drugNames);
+    const seenHdi = new Set<string>();
+    for (const { herb, drug, ev } of hdi.matches) {
+      const k = `${herb}|${drug}`;
+      if (seenHdi.has(k)) continue;
+      seenHdi.add(k);
+      const severity: Severity =
+        ev.category === "no-effect" ? "safe" : ev.category === "mixed" ? "moderate"
+          : ev.riskLevel === "CRITICAL" || ev.riskLevel === "HIGH" ? "high" : ev.riskLevel === "MODERATE" ? "moderate" : "safe";
+      kbInteractions.push({
+        a: herb,
+        b: drug,
+        severity,
+        kind: "herb-drug",
+        summary: `${ev.mechanism} ${ev.direction}. ${ev.outcome}`,
+        advice:
+          ev.category === "no-effect"
+            ? "Evidence table reports no significant human effect."
+            : ev.category === "mixed"
+              ? "Mixed / Conflicting Evidence — review with the prescribing clinician."
+              : `Evidence ${ev.evidenceLevel} (Record ${ev.id}). Review with the prescribing clinician.`,
+        source: "evidence-table",
+        evidence: { ...ev },
+      });
+    }
+
     /* ---- AI clinical pass for pairs the rule base does not cover ---- */
     const known = medicines.filter((m) => m.canonical || m.raw);
     let aiPayload: AiInteractionPayload | null = null;
@@ -282,7 +313,7 @@ export const analyzePrescription = createServerFn({ method: "POST" })
               {
                 role: "system",
                 content:
-                  "You are a clinical pharmacology assistant specialising in herb-drug and drug-drug interactions (Ayurvedic and modern medicine). Reply with STRICT JSON only.",
+                  "You are a clinical pharmacology assistant specialising in drug-drug and drug-condition interactions. Never report herb-drug interactions — those are handled by a curated evidence table. Reply with STRICT JSON only.",
               },
               {
                 role: "user",
@@ -309,7 +340,11 @@ export const analyzePrescription = createServerFn({ method: "POST" })
       const k = pairKey(a, b);
       if (seen.has(k)) continue;
       seen.add(k);
-      const kind = ["drug-drug", "herb-drug", "drug-condition"].includes(String(i.kind))
+      // The LLM may never decide that a herb-drug interaction exists.
+      if (String(i.kind) === "herb-drug") continue;
+      const herbSide = [a, b].some((x) => isEvidenceHerb(x) || medicines.some((m) => m.kind === "herb" && (m.canonical ?? m.raw).toLowerCase() === x.toLowerCase()));
+      if (herbSide) continue;
+      const kind = ["drug-drug", "drug-condition"].includes(String(i.kind))
         ? (i.kind as DetectedInteraction["kind"])
         : "drug-drug";
       aiInteractions.push({

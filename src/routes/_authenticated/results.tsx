@@ -17,6 +17,8 @@ import {
   Activity,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
+import { isEvidenceHerb } from "@/lib/hdi";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { getReport, getReports, type Interaction, type Report } from "@/lib/store";
 import { useEffect, useMemo, useState } from "react";
@@ -58,7 +60,7 @@ function Results() {
       Array.from(
         new Set(
           (report?.medicines ?? [])
-            .filter((m) => m.kind === "herb")
+            .filter((m) => m.kind === "herb" || isEvidenceHerb(m.canonical ?? m.raw))
             .map((m) => m.canonical ?? m.raw),
         ),
       ),
@@ -69,7 +71,7 @@ function Results() {
       Array.from(
         new Set(
           (report?.medicines ?? [])
-            .filter((m) => m.kind === "drug")
+            .filter((m) => m.kind !== "herb" && !isEvidenceHerb(m.canonical ?? m.raw))
             .map((m) => m.canonical ?? m.raw),
         ),
       ),
@@ -329,6 +331,8 @@ function Results() {
 
 
 
+      <HdiEvidenceSummary herbs={graphHerbs} drugs={graphDrugs} />
+
       {/* Interactions */}
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold">Detected interactions</h2>
@@ -343,7 +347,7 @@ function Results() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {report.interactions.map((i, idx) => {
+            {report.interactions.filter((i) => i.kind !== "herb-drug" || i.source === "evidence-table").map((i, idx) => {
               const Icon = pickIcon(i);
               const tone =
                 i.severity === "high"
@@ -377,7 +381,7 @@ function Results() {
                   <div className="text-muted-foreground mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
                     <span>{i.kind.replace("-", " ")}</span>
                     <span>·</span>
-                    <span>{i.source === "knowledge-base" ? "Knowledge base" : "AI clinical review"}</span>
+                    <span>{i.source === "evidence-table" ? `Master HDI Evidence Table · Record ${i.evidence?.id ?? ""}` : i.source === "knowledge-base" ? "Knowledge base" : "AI clinical review"}</span>
                   </div>
                 </div>
               );

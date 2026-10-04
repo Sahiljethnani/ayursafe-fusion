@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Leaf, Pill, X, Network, CheckCircle2, Activity, AlertTriangle, FileText } from "lucide-react";
-import { findEvidence, RISK_ORDER, RISK_STYLE, type HdiEvidence, type HdiRisk } from "@/lib/hdi";
+import { HDI_SOURCE_LABEL, categoryLabel, findEvidence, RISK_ORDER, RISK_STYLE, type HdiEvidence, type HdiRisk } from "@/lib/hdi";
 
 type Edge = { id: string; herb: string; drug: string; ev: HdiEvidence };
 type NodeSel = { kind: "herb" | "drug"; label: string };
@@ -270,8 +270,9 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                 <h3 className="mt-1 text-lg font-bold leading-snug">
                   {selected.ev.herb} <span className="text-muted-foreground">×</span> {selected.ev.drug}
                 </h3>
+                {selected.ev.botanical && <p className="text-muted-foreground text-xs italic">{selected.ev.botanical}</p>}
                 <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${RISK_STYLE[selected.ev.riskLevel].chip}`}>
-                  {selected.ev.riskLevel} risk
+                  {selected.ev.category === "confirmed" ? `${selected.ev.riskLevel} risk` : categoryLabel(selected.ev.category)}
                 </span>
 
                 <Field label="Pharmacological mechanism" value={selected.ev.mechanism} />
@@ -288,7 +289,9 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                   <FileText className="h-3 w-3" /> {selected.ev.evidenceLevel}
                 </div>
 
-                <p className="text-muted-foreground mt-5 text-[11px]">
+                <Field label="Source record" value={`Record ${selected.ev.id} · References ${selected.ev.references}`} />
+                <p className="text-primary mt-4 text-[11px] font-semibold">Evidence source: {HDI_SOURCE_LABEL}</p>
+                <p className="text-muted-foreground mt-2 text-[11px]">
                   Matched from your prescription entries “{selected.herb}” and “{selected.drug}”.
                 </p>
               </div>

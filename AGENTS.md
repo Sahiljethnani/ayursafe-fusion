@@ -1,0 +1,1 @@
+- Herb-drug interactions come only from src/data/hdi_evidence_data.json via src/lib/hdi.ts; the AI and the rule base must never create herb-drug alerts. Why: every HDI must be traceable to a curated evidence record.
