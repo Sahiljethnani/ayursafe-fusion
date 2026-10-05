@@ -12,6 +12,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { EvidenceChip } from "@/components/EvidenceChip";
 import { getReport, getReports, type Report } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/recommendations")({
@@ -120,7 +121,10 @@ function Recommendations() {
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <h3 className="text-sm font-semibold">{r.title}</h3>
-                  <RiskBadge level={r.severity} size="sm" />
+                  {(() => {
+                    const ev = report.interactions.find((x) => x.source === "evidence-table" && `${x.a} + ${x.b}` === r.title)?.evidence;
+                    return ev ? <EvidenceChip ev={ev} /> : <RiskBadge level={r.severity} size="sm" />;
+                  })()}
                 </div>
                 <p className="text-sm text-foreground/80">{r.detail}</p>
               </div>

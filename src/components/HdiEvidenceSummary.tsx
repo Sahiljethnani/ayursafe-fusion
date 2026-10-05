@@ -1,5 +1,5 @@
 import { BookOpen, CheckCircle2, Scale, ShieldAlert } from "lucide-react";
-import { evaluateHdi, HDI_SOURCE_LABEL, NO_MATCH_TEXT, RISK_STYLE, categoryLabel } from "@/lib/hdi";
+import { evaluateHdi, HDI_SOURCE_LABEL, NO_MATCH_TEXT, categoryLabel } from "@/lib/hdi";
 
 /** Evidence-table HDI results split into A (confirmed), B (mixed / no-effect), C (no match). */
 export function HdiEvidenceSummary({ herbs, drugs }: { herbs: string[]; drugs: string[] }) {
@@ -16,8 +16,8 @@ export function HdiEvidenceSummary({ herbs, drugs }: { herbs: string[]; drugs: s
           {m.ev.drug}
         </div>
         {m.ev.category === "confirmed" ? (
-          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_STYLE[m.ev.riskLevel].chip}`}>
-            {m.ev.riskLevel}
+          <span className="border-primary/30 bg-primary/10 text-primary rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase">
+            Evidence-supported interaction
           </span>
         ) : (
           <span className="bg-muted text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase">

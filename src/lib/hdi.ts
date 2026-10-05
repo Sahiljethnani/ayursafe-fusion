@@ -161,8 +161,18 @@ export function categoryLabel(c: HdiCategory) {
 export const RISK_ORDER: Record<HdiRisk, number> = { CRITICAL: 0, HIGH: 1, MODERATE: 2, LOW: 3 };
 
 export const RISK_STYLE: Record<HdiRisk, { stroke: string; width: number; chip: string; label: string }> = {
-  CRITICAL: { stroke: "var(--danger)", width: 5, chip: "bg-danger/15 text-danger border-danger/30", label: "Critical" },
+  CRITICAL: { stroke: "var(--danger)", width: 5, chip: "bg-danger/15 text-danger border-danger/30", label: "Evidence-supported interaction" },
   HIGH: { stroke: "oklch(0.68 0.17 45)", width: 3, chip: "bg-warn/25 text-warn-foreground border-warn/40", label: "High" },
-  MODERATE: { stroke: "oklch(0.82 0.15 90)", width: 2, chip: "bg-warn/15 text-warn-foreground border-warn/30", label: "Moderate" },
-  LOW: { stroke: "var(--muted-foreground)", width: 1.5, chip: "bg-muted text-muted-foreground border-border", label: "Low" },
+  MODERATE: { stroke: "oklch(0.82 0.15 90)", width: 2, chip: "bg-warn/15 text-warn-foreground border-warn/30", label: "Mixed / Conflicting Evidence" },
+  LOW: { stroke: "var(--muted-foreground)", width: 1.5, chip: "bg-muted text-muted-foreground border-border", label: "No significant human effect" },
 };
+
+/** Visual tier derived ONLY from the evidence-table classification (never from legacy risk levels). */
+export function tier(ev: HdiEvidence): HdiRisk {
+  return ev.category === "confirmed" ? "CRITICAL" : ev.category === "mixed" ? "MODERATE" : "LOW";
+}
+
+/** Display label for an evidence-table HDI: status + exact evidence level. */
+export function evidenceStatus(ev: { category: HdiCategory }) {
+  return ev.category === "confirmed" ? "Evidence-supported interaction" : ev.category === "mixed" ? "Mixed / Conflicting Evidence" : "No significant human effect";
+}
