@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BookOpen, FlaskConical, Leaf, Pill, Search, Target, TrendingUpDown, Stethoscope, FileText, X } from "lucide-react";
 import { evaluateHdi, HDI_SOURCE_LABEL, NO_MATCH_TEXT, categoryLabel, type HdiMatch } from "@/lib/hdi";
 
@@ -236,4 +236,3 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
-export { Fragment as _unused };
