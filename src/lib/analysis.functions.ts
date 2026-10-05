@@ -142,7 +142,9 @@ Read the supplied prescription (photo, scan or PDF) and return STRICT JSON only,
 Rules:
 - Include BOTH modern/allopathic drugs AND Ayurvedic/herbal/supplement products.
 - Never invent medicines, patients or dosages. If a field is not present, use null / [].
-- If the image is unreadable or is not a prescription, set "readable": false and "medicines": [].`;
+- Typed, printed, handwritten, digital or sample/demo prescriptions and medicine lists all count as prescriptions.
+- Extract every medicine you can read even if parts of the page are blurry; set "readable": true whenever at least one medicine is legible.
+- Only if no medicine at all can be read, set "readable": false and "medicines": [].`;
 
 type ExtractionPayload = {
   readable?: boolean;
@@ -213,7 +215,10 @@ export const analyzePrescription = createServerFn({ method: "POST" })
     if (!extraction) {
       throw new Error("We could not read structured data from this prescription. Try a sharper, well-lit photo.");
     }
-    if (extraction.readable === false) {
+    const hasMeds = Array.isArray(extraction.medicines) && extraction.medicines.length > 0;
+    // Only reject when the model also found no medicines — it sometimes flags typed,
+    // digital or partially blurry prescriptions as "unreadable" while still extracting them.
+    if (extraction.readable === false && !hasMeds) {
       throw new Error(
         "The prescription could not be read. Make sure the whole page is in frame, in focus and well lit, then upload again.",
       );
