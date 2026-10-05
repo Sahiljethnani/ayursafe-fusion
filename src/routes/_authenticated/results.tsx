@@ -19,6 +19,7 @@ import {
 import { RiskBadge } from "@/components/RiskBadge";
 import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
 import { isEvidenceHerb } from "@/lib/hdi";
+import { EvidenceChainGraph } from "@/components/EvidenceChainGraph";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { getReport, getReports, type Interaction, type Report } from "@/lib/store";
 import { useEffect, useMemo, useState } from "react";
@@ -325,6 +326,7 @@ function Results() {
         {showGraph && (
           <div className="animate-fade-up">
             <KnowledgeGraph herbs={graphHerbs} drugs={graphDrugs} />
+            <EvidenceChainGraph herbs={graphHerbs} drugs={graphDrugs} />
           </div>
         )}
       </section>
