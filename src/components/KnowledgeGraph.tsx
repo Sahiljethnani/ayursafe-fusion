@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Leaf, Pill, X, Network, CheckCircle2, Activity, AlertTriangle, FileText } from "lucide-react";
-import { HDI_SOURCE_LABEL, categoryLabel, findEvidence, RISK_ORDER, RISK_STYLE, type HdiEvidence, type HdiRisk } from "@/lib/hdi";
+import { HDI_SOURCE_LABEL, categoryLabel, findEvidence, RISK_ORDER, RISK_STYLE, type HdiEvidence, type HdiRisk, tier } from "@/lib/hdi";
 
 type Edge = { id: string; herb: string; drug: string; ev: HdiEvidence };
 type NodeSel = { kind: "herb" | "drug"; label: string };
@@ -26,7 +26,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
           unmatched.push(`${h} + ${d}`);
           continue;
         }
-        const best = [...evs].sort((a, b) => RISK_ORDER[a.riskLevel] - RISK_ORDER[b.riskLevel])[0]!;
+        const best = [...evs].sort((a, b) => RISK_ORDER[tier(a)] - RISK_ORDER[tier(b)])[0]!;
         edges.push({ id: `${h}__${d}__${best.id}`, herb: h, drug: d, ev: best });
       }
     }
@@ -36,13 +36,13 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
   const statsFor = (kind: "herb" | "drug", label: string) => {
     const rel = edges.filter((e) => (kind === "herb" ? e.herb === label : e.drug === label));
     const top = rel.length
-      ? [...rel].sort((a, b) => RISK_ORDER[a.ev.riskLevel] - RISK_ORDER[b.ev.riskLevel])[0]!.ev.riskLevel
+      ? [...rel].sort((a, b) => RISK_ORDER[tier(a.ev)] - RISK_ORDER[tier(b.ev)])[0]!.tier(ev)
       : null;
     return { count: rel.length, top, rel };
   };
 
   const highest: HdiRisk | null = edges.length
-    ? [...edges].sort((a, b) => RISK_ORDER[a.ev.riskLevel] - RISK_ORDER[b.ev.riskLevel])[0]!.ev.riskLevel
+    ? [...edges].sort((a, b) => RISK_ORDER[tier(a.ev)] - RISK_ORDER[tier(b.ev)])[0]!.tier(ev)
     : null;
 
   if (herbs.length === 0 || drugs.length === 0) {
@@ -80,8 +80,8 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
         <Stat icon={Activity} label="Interactions found" value={String(edges.length)} tone="text-foreground" />
         <Stat
           icon={AlertTriangle}
-          label="Highest risk"
-          value={highest ? RISK_STYLE[highest].label.toUpperCase() : "NONE"}
+          label="Strongest evidence status"
+          value={highest ? RISK_STYLE[highest].label : "None"}
           tone={highest ? "" : "text-safe"}
           style={highest ? { color: RISK_STYLE[highest].stroke } : undefined}
         />
@@ -111,7 +111,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
           {edges.map((e) => {
             const y1 = yFor(herbs.indexOf(e.herb), herbs.length);
             const y2 = yFor(drugs.indexOf(e.drug), drugs.length);
-            const s = RISK_STYLE[e.ev.riskLevel];
+            const s = RISK_STYLE[tier(e.ev)];
             const x1 = leftX + NODE_W / 2;
             const x2 = rightX - NODE_W / 2;
             const d = `M ${x1} ${y1} C ${W / 2 - 40} ${y1}, ${W / 2 + 40} ${y2}, ${x2} ${y2}`;
@@ -132,7 +132,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                     setSelected(e);
                   }}
                 />
-                {e.ev.riskLevel === "CRITICAL" && (
+                {tier(e.ev) === "CRITICAL" && (
                   <circle r={4} fill={s.stroke}>
                     <animateMotion dur="2.2s" repeatCount="indefinite" path={d} />
                   </circle>
@@ -214,7 +214,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
               </thead>
               <tbody className="divide-border/60 divide-y">
                 {[...edges]
-                  .sort((a, b) => RISK_ORDER[a.ev.riskLevel] - RISK_ORDER[b.ev.riskLevel])
+                  .sort((a, b) => RISK_ORDER[tier(a.ev)] - RISK_ORDER[tier(b.ev)])
                   .map((e) => (
                     <tr
                       key={e.id}
@@ -229,8 +229,8 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                       <td className="px-4 py-3 font-medium">{e.herb}</td>
                       <td className="px-4 py-3 font-medium">{e.drug}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_STYLE[e.ev.riskLevel].chip}`}>
-                          {e.ev.riskLevel}
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_STYLE[tier(e.ev)].chip}`}>
+                          {RISK_STYLE[tier(e.ev)].label} · {e.ev.evidenceLevel}
                         </span>
                       </td>
                       <td className="text-foreground/80 max-w-md px-4 py-3">{e.ev.outcome}</td>
@@ -271,8 +271,8 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                   {selected.ev.herb} <span className="text-muted-foreground">×</span> {selected.ev.drug}
                 </h3>
                 {selected.ev.botanical && <p className="text-muted-foreground text-xs italic">{selected.ev.botanical}</p>}
-                <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${RISK_STYLE[selected.ev.riskLevel].chip}`}>
-                  {selected.ev.category === "confirmed" ? `${selected.ev.riskLevel} risk` : categoryLabel(selected.ev.category)}
+                <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${RISK_STYLE[tier(selected.ev)].chip}`}>
+                  {RISK_STYLE[tier(selected.ev)].label}
                 </span>
 
                 <Field label="Pharmacological mechanism" value={selected.ev.mechanism} />
@@ -338,8 +338,8 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                               className="hover:bg-muted/60 w-full rounded-xl border p-3 text-left text-sm transition-colors"
                             >
                               <span className="font-medium">{nodeSel.kind === "herb" ? e.drug : e.herb}</span>
-                              <span className={`ml-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_STYLE[e.ev.riskLevel].chip}`}>
-                                {e.ev.riskLevel}
+                              <span className={`ml-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_STYLE[tier(e.ev)].chip}`}>
+                                {RISK_STYLE[tier(e.ev)].label} · {e.ev.evidenceLevel}
                               </span>
                             </button>
                           </li>
@@ -477,7 +477,7 @@ function Legend() {
       <span className="text-safe inline-flex items-center gap-1.5 font-medium">
         <CheckCircle2 className="h-3.5 w-3.5" /> No interaction
       </span>
-      {(["CRITICAL", "HIGH", "MODERATE", "LOW"] as const).map((r) => (
+      {(["CRITICAL", "MODERATE", "LOW"] as const).map((r) => (
         <span key={r} className="text-muted-foreground inline-flex items-center gap-1.5">
           <span
             className="inline-block w-7 rounded-full"

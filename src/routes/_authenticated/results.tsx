@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
 import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
-import { isEvidenceHerb } from "@/lib/hdi";
+import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL } from "@/lib/hdi";
+import { EvidenceChip } from "@/components/EvidenceChip";
 import { EvidenceChainGraph } from "@/components/EvidenceChainGraph";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { getReport, getReports, type Interaction, type Report } from "@/lib/store";
@@ -351,8 +352,9 @@ function Results() {
           <div className="grid gap-4 md:grid-cols-2">
             {report.interactions.filter((i) => i.kind !== "herb-drug" || i.source === "evidence-table").map((i, idx) => {
               const Icon = pickIcon(i);
-              const tone =
-                i.severity === "high"
+              const tone = i.source === "evidence-table"
+                ? "border-primary/30 bg-primary/5"
+                : i.severity === "high"
                   ? "border-danger/30 bg-danger/5"
                   : i.severity === "moderate"
                     ? "border-warn/40 bg-warn/10"
@@ -373,15 +375,33 @@ function Results() {
                         <SideLabel name={i.b} report={report} />
                       </div>
                     </div>
-                    <RiskBadge level={i.severity} size="sm" />
+                    {i.source === "evidence-table" && i.evidence ? (
+                      <EvidenceChip ev={i.evidence} />
+                    ) : (
+                      <RiskBadge level={i.severity} size="sm" />
+                    )}
                   </div>
+                  {i.source === "evidence-table" && i.evidence ? (
+                    <dl className="grid gap-1.5 text-xs sm:grid-cols-[120px_1fr]">
+                      <dt className="text-muted-foreground">Herb</dt><dd>{i.evidence.herb}{i.evidence.botanical ? ` (${i.evidence.botanical})` : ""}</dd>
+                      <dt className="text-muted-foreground">Drug</dt><dd>{i.evidence.drug}</dd>
+                      <dt className="text-muted-foreground">Mechanism</dt><dd>{i.evidence.mechanism}</dd>
+                      <dt className="text-muted-foreground">Direction</dt><dd>{i.evidence.direction}</dd>
+                      <dt className="text-muted-foreground">Clinical outcome</dt><dd>{i.evidence.outcome}</dd>
+                      <dt className="text-muted-foreground">Evidence level</dt><dd>{i.evidence.evidenceLevel}</dd>
+                      <dt className="text-muted-foreground">Evidence source</dt><dd>{HDI_SOURCE_LABEL}</dd>
+                      <dt className="text-muted-foreground">Record</dt><dd>{i.evidence.id}</dd>
+                      <dt className="text-muted-foreground">References</dt><dd>{i.evidence.references}</dd>
+                    </dl>
+                  ) : (
                   <p className="text-sm text-foreground/80">{i.summary}</p>
+                  )}
                   <p className="mt-3 text-sm font-medium">
                     <span className="text-muted-foreground">Action: </span>
                     {i.advice}
                   </p>
                   <div className="text-muted-foreground mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
-                    <span>{i.kind.replace("-", " ")}</span>
+                    <span>{i.kind === "drug-drug" ? "Drug-Drug Interaction" : i.kind === "herb-drug" ? "Herb-Drug Interaction (evidence table)" : i.kind.replace("-", " ")}</span>
                     <span>·</span>
                     <span>{i.source === "evidence-table" ? `Master HDI Evidence Table · Record ${i.evidence?.id ?? ""}` : i.source === "knowledge-base" ? "Knowledge base" : "AI clinical review"}</span>
                   </div>
@@ -417,7 +437,9 @@ function Results() {
                     <b>
                       {i.a} + {i.b}:
                     </b>{" "}
-                    {i.summary}
+                    {i.source === "evidence-table" && i.evidence
+                      ? `${evidenceStatus(i.evidence)} (Evidence ${i.evidence.evidenceLevel}, Record ${i.evidence.id}). ${i.evidence.mechanism} ${i.evidence.outcome}`
+                      : i.summary}
                   </span>
                 </li>
               );

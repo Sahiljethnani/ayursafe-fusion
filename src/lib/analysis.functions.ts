@@ -401,9 +401,16 @@ export const analyzePrescription = createServerFn({ method: "POST" })
     }
 
     const warnings: string[] = [...(strList(aiPayload?.patient_notes) ?? [])];
-    if (unidentified.length) {
+    const unmatchedHerbs = unidentified.filter((n) => isEvidenceHerb(n));
+    const unmatchedOther = unidentified.filter((n) => !isEvidenceHerb(n));
+    if (unmatchedOther.length) {
       warnings.unshift(
-        `${unidentified.length} item${unidentified.length > 1 ? "s" : ""} could not be matched to our clinical dictionary (${unidentified.join(", ")}). They were excluded from rule-based checks — verify manually.`,
+        `${unmatchedOther.length} item${unmatchedOther.length > 1 ? "s" : ""} could not be matched to our clinical dictionary (${unmatchedOther.join(", ")}). They were excluded from rule-based checks — verify manually.`,
+      );
+    }
+    if (unmatchedHerbs.length) {
+      warnings.unshift(
+        `Some herbal products were not matched to the standard drug dictionary (${unmatchedHerbs.join(", ")}). They are evaluated separately through the dedicated AyurSafe Master Herb-Drug Interaction Evidence Table.`,
       );
     }
 
