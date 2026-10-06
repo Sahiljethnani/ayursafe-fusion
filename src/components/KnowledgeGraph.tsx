@@ -36,13 +36,13 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
   const statsFor = (kind: "herb" | "drug", label: string) => {
     const rel = edges.filter((e) => (kind === "herb" ? e.herb === label : e.drug === label));
     const top = rel.length
-      ? [...rel].sort((a, b) => RISK_ORDER[tier(a.ev)] - RISK_ORDER[tier(b.ev)])[0]!.tier(ev)
+      ? tier([...rel].sort((a, b) => RISK_ORDER[tier(a.ev)] - RISK_ORDER[tier(b.ev)])[0]!.ev)
       : null;
     return { count: rel.length, top, rel };
   };
 
   const highest: HdiRisk | null = edges.length
-    ? [...edges].sort((a, b) => RISK_ORDER[tier(a.ev)] - RISK_ORDER[tier(b.ev)])[0]!.tier(ev)
+    ? tier([...edges].sort((a, b) => RISK_ORDER[tier(a.ev)] - RISK_ORDER[tier(b.ev)])[0]!.ev)
     : null;
 
   if (herbs.length === 0 || drugs.length === 0) {
