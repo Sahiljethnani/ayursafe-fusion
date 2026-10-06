@@ -207,7 +207,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                 <tr className="border-border/60 border-b">
                   <th className="px-4 py-3 font-semibold">Herb</th>
                   <th className="px-4 py-3 font-semibold">Medication</th>
-                  <th className="px-4 py-3 font-semibold">Risk</th>
+                  <th className="px-4 py-3 font-semibold">Evidence status</th>
                   <th className="px-4 py-3 font-semibold">Outcome</th>
                   <th className="px-4 py-3 font-semibold">Evidence</th>
                 </tr>
@@ -230,7 +230,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                       <td className="px-4 py-3 font-medium">{e.drug}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_STYLE[tier(e.ev)].chip}`}>
-                          {RISK_STYLE[tier(e.ev)].label} · {e.ev.evidenceLevel}
+                          {RISK_STYLE[tier(e.ev)].label} · {e.ev.evidenceLevel} · Record {e.ev.id}
                         </span>
                       </td>
                       <td className="text-foreground/80 max-w-md px-4 py-3">{e.ev.outcome}</td>
@@ -318,7 +318,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                         <div className="text-2xl font-bold" style={st.top ? { color: RISK_STYLE[st.top].stroke } : undefined}>
                           {st.top ? RISK_STYLE[st.top].label : "—"}
                         </div>
-                        <div className="text-muted-foreground text-[11px]">Highest risk level</div>
+                        <div className="text-muted-foreground text-[11px]">Strongest evidence status</div>
                       </div>
                     </div>
 
@@ -339,7 +339,7 @@ export function KnowledgeGraph({ herbs, drugs }: { herbs: string[]; drugs: strin
                             >
                               <span className="font-medium">{nodeSel.kind === "herb" ? e.drug : e.herb}</span>
                               <span className={`ml-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_STYLE[tier(e.ev)].chip}`}>
-                                {RISK_STYLE[tier(e.ev)].label} · {e.ev.evidenceLevel}
+                                {RISK_STYLE[tier(e.ev)].label} · {e.ev.evidenceLevel} · Record {e.ev.id}
                               </span>
                             </button>
                           </li>
