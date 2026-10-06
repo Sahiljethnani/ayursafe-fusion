@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
-  computeSafetyScore,
+  summarizeClinicalRisk,
   findInteractions,
   normalizeMedicineName,
   severityRank,
@@ -368,17 +368,7 @@ export const analyzePrescription = createServerFn({ method: "POST" })
     );
 
     const unidentified = medicines.filter((m) => !m.canonical).map((m) => m.raw);
-    const { score, level, breakdown } = computeSafetyScore(interactions, unidentified.length);
-
-    const highCount = interactions.filter((i) => i.severity === "high").length;
-    const modCount = interactions.filter((i) => i.severity === "moderate").length;
-
-    const explanation =
-      highCount > 0
-        ? `${highCount} high-severity interaction${highCount > 1 ? "s were" : " was"} detected across ${medicines.length} prescribed item${medicines.length > 1 ? "s" : ""}. Review these before dispensing and consider substitutions.`
-        : modCount > 0
-          ? `${modCount} moderate interaction${modCount > 1 ? "s were" : " was"} detected. Dispensing is possible with monitoring and patient counselling.`
-          : `No clinically significant interactions were detected between the ${medicines.length} item${medicines.length > 1 ? "s" : ""} on this prescription.`;
+    const { score, level, breakdown, explanation } = summarizeClinicalRisk(interactions, unidentified.length);
 
     const recommendations: Recommendation[] = [];
     for (const i of interactions.filter((x) => x.severity !== "safe").slice(0, 6)) {

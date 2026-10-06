@@ -17,6 +17,7 @@ import {
   Activity,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { summarizeClinicalRisk } from "@/lib/medical";
 import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
 import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL } from "@/lib/hdi";
 import { EvidenceChip } from "@/components/EvidenceChip";
@@ -94,16 +95,17 @@ function Results() {
     };
   }, [id]);
 
+  const clin = useMemo(() => (report ? summarizeClinicalRisk(report.interactions, report.unidentified?.length ?? 0) : null), [report]);
   const ringColor = useMemo(() => {
-    if (!report) return "var(--muted)";
-    return report.level === "safe"
+    if (!clin) return "var(--muted)";
+    return clin.level === "safe"
       ? "var(--safe)"
-      : report.level === "moderate"
+      : clin.level === "moderate"
         ? "var(--warn)"
         : "var(--danger)";
-  }, [report]);
+  }, [clin]);
 
-  if (!report) {
+  if (!report || !clin) {
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-4 py-10">
         <div className="glass shadow-elegant rounded-3xl p-10 text-center">
@@ -126,18 +128,17 @@ function Results() {
   }
 
   const counts = {
-    safe: report.interactions.filter((i) => i.severity === "safe").length,
-    moderate: report.interactions.filter((i) => i.severity === "moderate").length,
-    high: report.interactions.filter((i) => i.severity === "high").length,
+    moderate: clin.clinical.filter((i) => i.severity === "moderate").length,
+    high: clin.clinical.filter((i) => i.severity === "high").length,
   };
 
   const circumference = 2 * Math.PI * 80;
-  const offset = circumference - (report.score / 100) * circumference;
+  const offset = circumference - (clin.score / 100) * circumference;
 
   const headline =
-    report.level === "high"
-      ? "High risk — review urgently before dispensing."
-      : report.level === "moderate"
+    clin.level === "high"
+      ? "High drug–drug risk — review urgently before dispensing."
+      : clin.level === "moderate"
         ? "Caution advised — review interactions before dispensing."
         : "Looks safe — no major interactions detected.";
 
@@ -194,10 +195,10 @@ function Results() {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-5xl font-bold tracking-tight">{report.score}</div>
+            <div className="text-5xl font-bold tracking-tight">{clin.score}</div>
             <div className="text-sm text-muted-foreground">/ 100</div>
             <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Safety Score
+              Clinical Risk Score
             </div>
           </div>
           <div
@@ -207,17 +208,19 @@ function Results() {
         </div>
 
         <div>
-          <RiskBadge level={report.level} size="lg" />
+          <p className="text-muted-foreground mb-2 text-[11px] font-bold uppercase tracking-wider">Clinical Risk Summary</p>
+          <RiskBadge level={clin.level} size="lg" />
           <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{headline}</h2>
-          <p className="mt-2 text-muted-foreground">{report.explanation}</p>
+          <p className="mt-2 text-muted-foreground">{clin.explanation}</p>
+          <p className="text-muted-foreground mt-1 text-xs">The score covers drug–drug and drug–condition findings only. Herb–drug evidence findings are reported separately using evidence status and evidence level.</p>
           <div className="mt-5 grid grid-cols-3 gap-3">
-            <Stat label="Safe" value={counts.safe} tone="safe" />
-            <Stat label="Moderate" value={counts.moderate} tone="warn" />
-            <Stat label="High risk" value={counts.high} tone="danger" />
+            <Stat label="Evidence-based HDI" value={clin.hdiConfirmed} tone="safe" />
+            <Stat label="Moderate DDI" value={counts.moderate} tone="warn" />
+            <Stat label="High-risk DDI" value={counts.high} tone="danger" />
           </div>
-          {report.scoreBreakdown.length > 0 && (
+          {clin.breakdown.length > 0 && (
             <p className="text-muted-foreground mt-4 text-xs">
-              How this score was calculated: {report.scoreBreakdown.join(" · ")}
+              How this score was calculated (drug–drug / drug–condition only): {clin.breakdown.join(" · ")}
             </p>
           )}
         </div>
@@ -422,10 +425,12 @@ function Results() {
             <h2 className="text-lg font-semibold">Why is this risky?</h2>
           </div>
           <ul className="space-y-3 text-sm text-foreground/85">
-            {report.interactions.map((i, idx) => {
+            {report.interactions.filter((i) => i.kind !== "herb-drug" || i.source === "evidence-table").map((i, idx) => {
+              const isHdi = i.source === "evidence-table";
               const Icon = i.severity === "safe" ? ShieldCheck : AlertTriangle;
-              const color =
-                i.severity === "high"
+              const color = isHdi
+                ? "text-primary"
+                : i.severity === "high"
                   ? "text-danger"
                   : i.severity === "moderate"
                     ? "text-warn-foreground"
@@ -434,12 +439,15 @@ function Results() {
                 <li key={`${i.a}-${i.b}-${idx}-x`} className="flex gap-3">
                   <Icon className={`${color} mt-0.5 h-4 w-4 shrink-0`} />
                   <span>
+                    <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">
+                      {isHdi ? "Herb-Drug Interaction — Master HDI Evidence Table" : i.kind === "drug-condition" ? "Drug-Condition Interaction — AI clinical review" : "Drug-Drug Interaction — AI clinical review"}
+                    </span>
                     <b>
                       {i.a} + {i.b}:
                     </b>{" "}
                     {i.source === "evidence-table" && i.evidence
                       ? `${evidenceStatus(i.evidence)} (Evidence ${i.evidence.evidenceLevel}, Record ${i.evidence.id}). ${i.evidence.mechanism} ${i.evidence.outcome}`
-                      : i.summary}
+                      : `${i.severity === "high" ? "High Risk" : i.severity === "moderate" ? "Moderate Risk" : "Low Risk"}. ${i.summary}`}
                   </span>
                 </li>
               );
