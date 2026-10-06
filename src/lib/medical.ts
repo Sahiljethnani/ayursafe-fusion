@@ -468,3 +468,29 @@ export function computeSafetyScore(
   return { score, level, breakdown };
 }
 
+
+/** True for clinical-engine findings (DDI / drug-condition). Herb-drug findings are evidence-table only and never scored. */
+export function isClinicalRiskFinding(i: DetectedInteraction): boolean {
+  return i.kind !== "herb-drug" && (i as { source?: string }).source !== "evidence-table";
+}
+
+/** Clinical Risk Summary: score/level/explanation from DDI + drug-condition findings only. HDI evidence is reported separately. */
+export function summarizeClinicalRisk(interactions: DetectedInteraction[], unknownCount: number) {
+  const clinical = interactions.filter(isClinicalRiskFinding);
+  const hdi = interactions.filter((i) => (i as { source?: string }).source === "evidence-table");
+  const cat = (i: DetectedInteraction) => (i as { evidence?: { category?: string } }).evidence?.category;
+  const hdiConfirmed = hdi.filter((i) => cat(i) !== "mixed" && cat(i) !== "no-effect").length;
+  const hdiOther = hdi.length - hdiConfirmed;
+  const { score, level, breakdown } = computeSafetyScore(clinical, unknownCount);
+  const ddiReview = clinical.filter((i) => i.severity !== "safe").length;
+  const explanation = `Evidence-based herb–drug interactions: ${hdiConfirmed}. Mixed / conflicting or no-effect evidence: ${hdiOther}. Drug–drug interactions requiring clinical review: ${ddiReview}.`;
+  return {
+    score,
+    level,
+    breakdown: breakdown.map((b) => b.replace("high-risk finding", "high-risk drug–drug finding").replace("moderate finding", "moderate drug–drug finding")),
+    explanation,
+    hdiConfirmed,
+    hdiOther,
+    clinical,
+  };
+}
