@@ -17,6 +17,7 @@ import {
   Activity,
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
+import { summarizeClinicalRisk } from "@/lib/medical";
 import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
 import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL } from "@/lib/hdi";
 import { EvidenceChip } from "@/components/EvidenceChip";
@@ -427,8 +428,9 @@ function Results() {
             {report.interactions.filter((i) => i.kind !== "herb-drug" || i.source === "evidence-table").map((i, idx) => {
               const isHdi = i.source === "evidence-table";
               const Icon = i.severity === "safe" ? ShieldCheck : AlertTriangle;
-              const color =
-                i.severity === "high"
+              const color = isHdi
+                ? "text-primary"
+                : i.severity === "high"
                   ? "text-danger"
                   : i.severity === "moderate"
                     ? "text-warn-foreground"
@@ -438,7 +440,7 @@ function Results() {
                   <Icon className={`${color} mt-0.5 h-4 w-4 shrink-0`} />
                   <span>
                     <span className="text-muted-foreground block text-[10px] font-bold uppercase tracking-wider">
-                      {isHdi ? "Herb-Drug Interaction — Master HDI Evidence Table" : "Drug-Drug Interaction — AI clinical review"}
+                      {isHdi ? "Herb-Drug Interaction — Master HDI Evidence Table" : i.kind === "drug-condition" ? "Drug-Condition Interaction — AI clinical review" : "Drug-Drug Interaction — AI clinical review"}
                     </span>
                     <b>
                       {i.a} + {i.b}:
