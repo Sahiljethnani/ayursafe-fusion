@@ -100,7 +100,7 @@ function Results() {
     if (!clin) return "var(--muted)";
     return clin.level === "safe"
       ? "var(--safe)"
-      : report.level === "moderate"
+      : clin.level === "moderate"
         ? "var(--warn)"
         : "var(--danger)";
   }, [clin]);
