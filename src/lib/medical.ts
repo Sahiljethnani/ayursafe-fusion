@@ -482,8 +482,19 @@ export function summarizeClinicalRisk(interactions: DetectedInteraction[], unkno
   const hdiConfirmed = hdi.filter((i) => cat(i) !== "mixed" && cat(i) !== "no-effect").length;
   const hdiOther = hdi.length - hdiConfirmed;
   const { score, level, breakdown } = computeSafetyScore(clinical, unknownCount);
-  const ddiReview = clinical.filter((i) => i.severity !== "safe").length;
-  const explanation = `Evidence-based herb–drug interactions: ${hdiConfirmed}. Mixed / conflicting or no-effect evidence: ${hdiOther}. Drug–drug interactions requiring clinical review: ${ddiReview}.`;
+  const ddiReview = clinical.filter((i) => i.kind === "drug-drug" && i.severity !== "safe").length;
+  const otherReview = clinical.filter((i) => i.kind !== "drug-drug" && i.severity !== "safe").length;
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const parts = [
+    plural(hdiConfirmed, "evidence-based herb–drug interaction", "evidence-based herb–drug interactions"),
+    plural(hdiOther, "mixed/conflicting or no-effect herb–drug finding", "mixed/conflicting or no-effect herb–drug findings"),
+    plural(ddiReview, "drug–drug interaction requiring clinical review", "drug–drug interactions requiring clinical review"),
+  ];
+  if (otherReview > 0)
+    parts.push(
+      plural(otherReview, "drug–condition or allergy finding requiring clinical review", "drug–condition or allergy findings requiring clinical review"),
+    );
+  const explanation = parts.join(" · ");
   return {
     score,
     level,
@@ -491,6 +502,8 @@ export function summarizeClinicalRisk(interactions: DetectedInteraction[], unkno
     explanation,
     hdiConfirmed,
     hdiOther,
+    ddiReview,
+    otherReview,
     clinical,
   };
 }
