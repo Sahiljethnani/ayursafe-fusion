@@ -52,6 +52,9 @@ function Processing() {
         const result = await analyze({
           data: { fileName: pending.name, mimeType: pending.type || "application/octet-stream", dataUrl },
         });
+        if (pending.ageYears != null) {
+          result.patient = { ...result.patient, age: `${pending.ageYears} years` };
+        }
         const report = await saveReport(result);
         clearPendingFile();
         doneIdRef.current = report.id;
