@@ -19,6 +19,7 @@ import {
 import { RiskBadge } from "@/components/RiskBadge";
 import { summarizeClinicalRisk } from "@/lib/medical";
 import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
+import { PatientContext } from "@/components/PatientContext";
 import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL } from "@/lib/hdi";
 import { EvidenceChip } from "@/components/EvidenceChip";
 import { EvidenceChainGraph } from "@/components/EvidenceChainGraph";
@@ -338,6 +339,8 @@ function Results() {
 
 
       <HdiEvidenceSummary herbs={graphHerbs} drugs={graphDrugs} />
+
+      <PatientContext age={patient.age} medicineCount={report.medicines.length} />
 
       {/* Interactions */}
       <section className="mb-8">

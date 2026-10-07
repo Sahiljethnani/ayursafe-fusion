@@ -1,1 +1,2 @@
 - Herb-drug interactions come only from src/data/hdi_evidence_data.json via src/lib/hdi.ts; the AI and the rule base must never create herb-drug alerts. Why: every HDI must be traceable to a curated evidence record.
+- Patient age is a context-only layer (src/lib/ageContext.ts, configurable boundaries); it must never create, remove or re-grade HDI/DDI findings. Why: age has no curated interaction evidence.

@@ -71,7 +71,7 @@ export async function signOut() {
 
 /* -------- Pending upload (Upload → Processing) -------- */
 
-export type PendingFile = { file: File; name: string; size: number; type: string };
+export type PendingFile = { file: File; name: string; size: number; type: string; ageYears?: number | null };
 
 let pendingFile: PendingFile | null = null;
 

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
 import { UploadCloud, FileText, X, Sparkles, CheckCircle2 } from "lucide-react";
 import { setPendingFile, getSession } from "@/lib/store";
+import { validateAge, ageFromDob, classifyAge } from "@/lib/ageContext";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/upload")({
@@ -26,6 +27,10 @@ function UploadPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [drag, setDrag] = useState(false);
+  const [ageInput, setAgeInput] = useState("");
+  const [dob, setDob] = useState("");
+  const ageCheck = dob ? ageFromDob(dob) : validateAge(ageInput);
+  const ageYears = ageCheck.ok ? ageCheck.years : null;
 
   useEffect(() => {
     if (!file) {
@@ -74,7 +79,11 @@ function UploadPage() {
 
   const handleAnalyze = () => {
     if (!file) return;
-    setPendingFile({ file, name: file.name, size: file.size, type: file.type });
+    if (!ageCheck.ok) {
+      toast.error(ageCheck.error);
+      return;
+    }
+    setPendingFile({ file, name: file.name, size: file.size, type: file.type, ageYears });
     navigate({ to: "/processing" });
   };
 
@@ -88,6 +97,31 @@ function UploadPage() {
         <p className="mt-1 text-muted-foreground">
           Add a clear photo or PDF of the prescription. We'll handle OCR and analysis.
         </p>
+      </div>
+
+      <div className="glass shadow-card mb-6 rounded-3xl p-5 sm:p-6">
+        <h2 className="text-sm font-semibold">Patient information (optional)</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Used only as patient context. It never creates or changes herb–drug interactions.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="text-xs">
+            Patient age (years)
+            <input type="number" min={0} max={130} value={ageInput} disabled={!!dob}
+              onChange={(e) => setAgeInput(e.target.value)}
+              className="border-border bg-background mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
+          </label>
+          <label className="text-xs">
+            or date of birth
+            <input type="date" value={dob} max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setDob(e.target.value)}
+              className="border-border bg-background mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
+          </label>
+          <div className="text-xs">
+            Age group
+            <div className="mt-1 py-2 text-sm font-semibold">
+              {!ageCheck.ok ? <span className="text-destructive">{ageCheck.error}</span> : ageYears === null ? <span className="text-muted-foreground">Not provided</span> : `${classifyAge(ageYears)} · ${ageYears} y`}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div
