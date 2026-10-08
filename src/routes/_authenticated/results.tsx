@@ -20,6 +20,7 @@ import { RiskBadge } from "@/components/RiskBadge";
 import { summarizeClinicalRisk } from "@/lib/medical";
 import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
 import { PatientContext } from "@/components/PatientContext";
+import { sanitizeAgeNotes } from "@/lib/ageContext";
 import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL } from "@/lib/hdi";
 import { EvidenceChip } from "@/components/EvidenceChip";
 import { EvidenceChainGraph } from "@/components/EvidenceChainGraph";
@@ -140,8 +141,9 @@ function Results() {
     clin.level === "high"
       ? "High drug–drug risk — review urgently before dispensing."
       : clin.level === "moderate"
-        ? "Caution advised — review interactions before dispensing."
-        : "Looks safe — no major interactions detected.";
+        ? "Clinical review recommended — moderate drug–drug findings present."
+        : "No major clinical risk detected from drug–drug / drug–condition findings.";
+  const warnings = sanitizeAgeNotes(report.warnings, report.patient.age);
 
   const patient = report.patient;
   const patientBits = [
@@ -210,7 +212,7 @@ function Results() {
 
         <div>
           <p className="text-muted-foreground mb-2 text-[11px] font-bold uppercase tracking-wider">Clinical Risk Summary</p>
-          <RiskBadge level={clin.level} size="lg" />
+          <RiskBadge level={clin.level} size="lg" variant="clinical" />
           <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{headline}</h2>
           <p className="mt-2 text-muted-foreground">{clin.explanation}</p>
           <p className="text-muted-foreground mt-1 text-xs">The score covers drug–drug and drug–condition findings only. Herb–drug evidence findings are reported separately using evidence status and evidence level.</p>
@@ -228,14 +230,14 @@ function Results() {
       </section>
 
       {/* Warnings */}
-      {report.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <section className="glass border-warn/40 bg-warn/10 shadow-card mb-8 rounded-3xl border p-5 sm:p-6">
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="text-warn-foreground h-4 w-4" />
             <h2 className="text-sm font-semibold">Analysis notes</h2>
           </div>
           <ul className="space-y-2 text-sm text-foreground/85">
-            {report.warnings.map((w, i) => (
+            {warnings.map((w, i) => (
               <li key={i} className="flex gap-2">
                 <span className="text-warn-foreground">·</span>
                 <span>{w}</span>

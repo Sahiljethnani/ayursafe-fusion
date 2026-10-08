@@ -1,3 +1,4 @@
+import { sanitizeAgeNotes } from "@/lib/ageContext";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
@@ -390,7 +391,7 @@ export const analyzePrescription = createServerFn({ method: "POST" })
       recommendations.push({ kind, title, detail, severity: asSeverity(r.severity) });
     }
 
-    const warnings: string[] = [...(strList(aiPayload?.patient_notes) ?? [])];
+    const warnings: string[] = sanitizeAgeNotes(strList(aiPayload?.patient_notes) ?? [], patient.age);
     const unmatchedHerbs = unidentified.filter((n) => isEvidenceHerb(n));
     const unmatchedOther = unidentified.filter((n) => !isEvidenceHerb(n));
     if (unmatchedOther.length) {

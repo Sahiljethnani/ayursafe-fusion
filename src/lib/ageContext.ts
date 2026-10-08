@@ -76,3 +76,19 @@ export function buildAgeContext(years: number, medicineCount: number) {
     );
   return { years, group, considerations };
 }
+
+const AGE_CLAIM_RE = /\b(\d+\s*[- ]?(year|yr)s?[- ]?old|pediatric|paediatric|child|children|infant|adolescent|elderly|geriatric|older adult|age[ds]?)\b/i;
+
+/**
+ * Remove AI-generated age-specific medication claims (no validated age knowledge source)
+ * and replace with a single neutral, non-grading note.
+ */
+export function sanitizeAgeNotes(notes: string[], ageRaw: string | null | undefined): string[] {
+  const kept = notes.filter((n) => !AGE_CLAIM_RE.test(n));
+  const years = parseAgeYears(ageRaw);
+  if (years != null && classifyAge(years) === "Pediatric") {
+    const y = Number.isInteger(years) ? years : Math.round(years * 10) / 10;
+    kept.unshift(`Patient is ${y} years old. Pediatric medication-safety considerations may require additional clinical review.`);
+  }
+  return kept;
+}
