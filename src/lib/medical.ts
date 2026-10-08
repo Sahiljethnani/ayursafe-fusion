@@ -481,12 +481,15 @@ export function summarizeClinicalRisk(interactions: DetectedInteraction[], unkno
   const cat = (i: DetectedInteraction) => (i as { evidence?: { category?: string } }).evidence?.category;
   const hdiConfirmed = hdi.filter((i) => cat(i) !== "mixed" && cat(i) !== "no-effect").length;
   const hdiOther = hdi.length - hdiConfirmed;
+  const recId = (i: DetectedInteraction) => (i as { evidence?: { id?: number | string } }).evidence?.id;
+  const hdiConfirmedItems = hdi.filter((i) => cat(i) !== "mixed" && cat(i) !== "no-effect");
+  const hdiUniqueRecords = new Set(hdiConfirmedItems.map(recId).filter((v) => v != null)).size;
   const { score, level, breakdown } = computeSafetyScore(clinical, unknownCount);
   const ddiReview = clinical.filter((i) => i.kind === "drug-drug" && i.severity !== "safe").length;
   const otherReview = clinical.filter((i) => i.kind !== "drug-drug" && i.severity !== "safe").length;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const parts = [
-    plural(hdiConfirmed, "evidence-based herb–drug interaction", "evidence-based herb–drug interactions"),
+    `${hdiUniqueRecords} unique evidence record${hdiUniqueRecords === 1 ? "" : "s"} · ${plural(hdiConfirmed, "matched herb–drug pair", "matched herb–drug pairs")}`,
     plural(hdiOther, "mixed/conflicting or no-effect herb–drug finding", "mixed/conflicting or no-effect herb–drug findings"),
     plural(ddiReview, "drug–drug interaction requiring clinical review", "drug–drug interactions requiring clinical review"),
   ];
@@ -501,6 +504,7 @@ export function summarizeClinicalRisk(interactions: DetectedInteraction[], unkno
     breakdown: breakdown.map((b) => b.replace("high-risk finding", "high-risk drug–drug finding").replace("moderate finding", "moderate drug–drug finding")),
     explanation,
     hdiConfirmed,
+    hdiUniqueRecords,
     hdiOther,
     ddiReview,
     otherReview,

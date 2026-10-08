@@ -125,8 +125,9 @@ export function EvidenceChainGraph({ herbs, drugs }: { herbs: string[]; drugs: s
 
       <div className="space-y-3">
         {shown.length === 0 && <p className="text-muted-foreground text-xs">No evidence-table relationships match these filters.</p>}
-        {shown.map((m) => {
+        {shown.map((m, idx) => {
           const ents = entitiesOf(m.ev.mechanism);
+          const recordSeenBefore = shown.slice(0, idx).some((p) => p.ev.id === m.ev.id);
           const confirmed = m.ev.category === "confirmed";
           return (
             <div key={`${m.herb}-${m.drug}-${m.ev.id}`} className="bg-card/50 overflow-x-auto rounded-2xl border p-3">
@@ -158,7 +159,19 @@ export function EvidenceChainGraph({ herbs, drugs }: { herbs: string[]; drugs: s
                   </>
                 )}
                 <Arrow label="source" />
-                <Node kind="record" label={`Evidence Record ${m.ev.id}`} sub={m.ev.evidenceLevel} m={m} />
+                {recordSeenBefore ? (
+                  <button
+                    type="button"
+                    onClick={() => setSel({ kind: "record", label: `Evidence Record ${m.ev.id}`, m })}
+                    className="border-border bg-muted/40 text-muted-foreground hover:bg-muted flex max-w-40 flex-col items-start rounded-xl border border-dashed px-2.5 py-1.5 text-left text-[10px] leading-tight"
+                    title={`Shared evidence record ${m.ev.id} — shown once above`}
+                  >
+                    <span className="font-semibold">↳ Record {m.ev.id}</span>
+                    <span>shared record, shown above</span>
+                  </button>
+                ) : (
+                  <Node kind="record" label={`Evidence Record ${m.ev.id}`} sub={m.ev.evidenceLevel} m={m} />
+                )}
               </div>
             </div>
           );
