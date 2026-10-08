@@ -504,6 +504,7 @@ export function summarizeClinicalRisk(interactions: DetectedInteraction[], unkno
     breakdown: breakdown.map((b) => b.replace("high-risk finding", "high-risk drug–drug finding").replace("moderate finding", "moderate drug–drug finding")),
     explanation,
     hdiConfirmed,
+    hdiUniqueRecords,
     hdiOther,
     ddiReview,
     otherReview,

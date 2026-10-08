@@ -125,8 +125,9 @@ export function EvidenceChainGraph({ herbs, drugs }: { herbs: string[]; drugs: s
 
       <div className="space-y-3">
         {shown.length === 0 && <p className="text-muted-foreground text-xs">No evidence-table relationships match these filters.</p>}
-        {shown.map((m) => {
+        {shown.map((m, idx) => {
           const ents = entitiesOf(m.ev.mechanism);
+          const recordSeenBefore = shown.slice(0, idx).some((p) => p.ev.id === m.ev.id);
           const confirmed = m.ev.category === "confirmed";
           return (
             <div key={`${m.herb}-${m.drug}-${m.ev.id}`} className="bg-card/50 overflow-x-auto rounded-2xl border p-3">
