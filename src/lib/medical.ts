@@ -489,7 +489,7 @@ export function summarizeClinicalRisk(interactions: DetectedInteraction[], unkno
   const otherReview = clinical.filter((i) => i.kind !== "drug-drug" && i.severity !== "safe").length;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const parts = [
-    plural(hdiConfirmed, "evidence-based herb–drug interaction", "evidence-based herb–drug interactions"),
+    `${hdiUniqueRecords} unique evidence record${hdiUniqueRecords === 1 ? "" : "s"} · ${plural(hdiConfirmed, "matched herb–drug pair", "matched herb–drug pairs")}`,
     plural(hdiOther, "mixed/conflicting or no-effect herb–drug finding", "mixed/conflicting or no-effect herb–drug findings"),
     plural(ddiReview, "drug–drug interaction requiring clinical review", "drug–drug interactions requiring clinical review"),
   ];
