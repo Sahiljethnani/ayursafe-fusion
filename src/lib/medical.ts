@@ -481,6 +481,9 @@ export function summarizeClinicalRisk(interactions: DetectedInteraction[], unkno
   const cat = (i: DetectedInteraction) => (i as { evidence?: { category?: string } }).evidence?.category;
   const hdiConfirmed = hdi.filter((i) => cat(i) !== "mixed" && cat(i) !== "no-effect").length;
   const hdiOther = hdi.length - hdiConfirmed;
+  const recId = (i: DetectedInteraction) => (i as { evidence?: { id?: number | string } }).evidence?.id;
+  const hdiConfirmedItems = hdi.filter((i) => cat(i) !== "mixed" && cat(i) !== "no-effect");
+  const hdiUniqueRecords = new Set(hdiConfirmedItems.map(recId).filter((v) => v != null)).size;
   const { score, level, breakdown } = computeSafetyScore(clinical, unknownCount);
   const ddiReview = clinical.filter((i) => i.kind === "drug-drug" && i.severity !== "safe").length;
   const otherReview = clinical.filter((i) => i.kind !== "drug-drug" && i.severity !== "safe").length;
