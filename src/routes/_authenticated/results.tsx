@@ -142,7 +142,7 @@ function Results() {
   const headline =
     statusLevel === "high"
       ? "High drug–drug risk — review urgently before dispensing."
-      : clin.level === "moderate"
+      : statusLevel === "moderate"
         ? "Clinical review recommended — moderate drug–drug findings present."
         : "No major clinical risk detected from drug–drug / drug–condition findings.";
   const warnings = sanitizeAgeNotes(report.warnings, report.patient.age);
