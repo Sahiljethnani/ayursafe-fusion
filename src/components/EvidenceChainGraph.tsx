@@ -162,7 +162,7 @@ export function EvidenceChainGraph({ herbs, drugs }: { herbs: string[]; drugs: s
                 {recordSeenBefore ? (
                   <button
                     type="button"
-                    onClick={() => setSel({ m, why: "record" })}
+                    onClick={() => setSel({ kind: "record", label: `Evidence Record ${m.ev.id}`, m })}
                     className="border-border bg-muted/40 text-muted-foreground hover:bg-muted flex max-w-40 flex-col items-start rounded-xl border border-dashed px-2.5 py-1.5 text-left text-[10px] leading-tight"
                     title={`Shared evidence record ${m.ev.id} — shown once above`}
                   >
