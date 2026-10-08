@@ -137,8 +137,10 @@ function Results() {
   const circumference = 2 * Math.PI * 80;
   const offset = circumference - (clin.score / 100) * circumference;
 
+  const statusLevel: "safe" | "moderate" | "high" =
+    counts.high > 0 ? "high" : counts.moderate > 0 ? "moderate" : "safe";
   const headline =
-    clin.level === "high"
+    statusLevel === "high"
       ? "High drug–drug risk — review urgently before dispensing."
       : clin.level === "moderate"
         ? "Clinical review recommended — moderate drug–drug findings present."
@@ -212,7 +214,7 @@ function Results() {
 
         <div>
           <p className="text-muted-foreground mb-2 text-[11px] font-bold uppercase tracking-wider">Clinical Risk Summary</p>
-          <RiskBadge level={clin.level} size="lg" variant="clinical" />
+          <RiskBadge level={statusLevel} size="lg" variant="clinical" />
           <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{headline}</h2>
           <p className="mt-2 text-muted-foreground">{clin.explanation}</p>
           <p className="text-muted-foreground mt-1 text-xs">The score covers drug–drug and drug–condition findings only. Herb–drug evidence findings are reported separately using evidence status and evidence level.</p>
