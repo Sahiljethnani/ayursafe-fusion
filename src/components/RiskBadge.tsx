@@ -20,7 +20,7 @@ const config = {
   },
 } as const;
 
-export function RiskBadge({ level, size = "md" }: { level: RiskLevel; size?: "sm" | "md" | "lg" }) {
+export function RiskBadge({ level, size = "md", variant }: { level: RiskLevel; size?: "sm" | "md" | "lg"; variant?: "clinical" }) {
   const c = config[level];
   const Icon = c.icon;
   const sizing =
@@ -34,7 +34,9 @@ export function RiskBadge({ level, size = "md" }: { level: RiskLevel; size?: "sm
       className={`inline-flex items-center gap-1.5 rounded-full border font-semibold ${c.classes} ${sizing}`}
     >
       <Icon className={size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5"} strokeWidth={2.4} />
-      {c.label}
+      {variant === "clinical"
+        ? level === "high" ? "High Risk" : level === "moderate" ? "Clinical Review Recommended" : "No Major Clinical Risk Detected"
+        : c.label}
     </span>
   );
 }
