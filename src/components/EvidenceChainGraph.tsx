@@ -159,7 +159,19 @@ export function EvidenceChainGraph({ herbs, drugs }: { herbs: string[]; drugs: s
                   </>
                 )}
                 <Arrow label="source" />
-                <Node kind="record" label={`Evidence Record ${m.ev.id}`} sub={m.ev.evidenceLevel} m={m} />
+                {recordSeenBefore ? (
+                  <button
+                    type="button"
+                    onClick={() => setSel({ m, why: "record" })}
+                    className="border-border bg-muted/40 text-muted-foreground hover:bg-muted flex max-w-40 flex-col items-start rounded-xl border border-dashed px-2.5 py-1.5 text-left text-[10px] leading-tight"
+                    title={`Shared evidence record ${m.ev.id} — shown once above`}
+                  >
+                    <span className="font-semibold">↳ Record {m.ev.id}</span>
+                    <span>shared record, shown above</span>
+                  </button>
+                ) : (
+                  <Node kind="record" label={`Evidence Record ${m.ev.id}`} sub={m.ev.evidenceLevel} m={m} />
+                )}
               </div>
             </div>
           );
