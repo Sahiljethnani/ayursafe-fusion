@@ -1,4 +1,5 @@
 import { sanitizeAgeNotes } from "@/lib/ageContext";
+import { neutralInteractionAdvice, neutralNote, neutralRecommendation } from "@/lib/safeWording";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
@@ -319,7 +320,7 @@ export const analyzePrescription = createServerFn({ method: "POST" })
               {
                 role: "system",
                 content:
-                  "You are a clinical pharmacology assistant specialising in drug-drug and drug-condition interactions. Never report herb-drug interactions — those are handled by a curated evidence table. Reply with STRICT JSON only.",
+                  "You are a clinical pharmacology assistant specialising in drug-drug and drug-condition interactions. Never report herb-drug interactions — those are handled by a curated evidence table. Your output is informational only: never give dose changes, maximum doses, start/stop/avoid instructions, substitutions or monitoring orders; instead say clinical review is recommended. Reply with STRICT JSON only.",
               },
               {
                 role: "user",
@@ -364,7 +365,9 @@ export const analyzePrescription = createServerFn({ method: "POST" })
       });
     }
 
-    const interactions = [...kbInteractions, ...aiInteractions].sort(
+    const interactions = [...kbInteractions, ...aiInteractions]
+      .map((i) => (i.source === "evidence-table" ? i : { ...i, advice: neutralInteractionAdvice(i) }))
+      .sort(
       (x, y) => severityRank(y.severity) - severityRank(x.severity),
     );
 
@@ -376,7 +379,7 @@ export const analyzePrescription = createServerFn({ method: "POST" })
       recommendations.push({
         kind: i.severity === "high" ? "action" : "monitor",
         title: `${i.a} + ${i.b}`,
-        detail: i.advice,
+        detail: i.source === "evidence-table" ? i.advice : neutralInteractionAdvice(i),
         severity: i.severity,
       });
     }
@@ -388,10 +391,10 @@ export const analyzePrescription = createServerFn({ method: "POST" })
       const kind = ["action", "alternative", "monitor"].includes(String(r.kind))
         ? (r.kind as Recommendation["kind"])
         : "monitor";
-      recommendations.push({ kind, title, detail, severity: asSeverity(r.severity) });
+      recommendations.push(neutralRecommendation({ kind, title, detail, severity: asSeverity(r.severity) }));
     }
 
-    const warnings: string[] = sanitizeAgeNotes(strList(aiPayload?.patient_notes) ?? [], patient.age);
+    const warnings: string[] = sanitizeAgeNotes(strList(aiPayload?.patient_notes) ?? [], patient.age).map(neutralNote);
     const unmatchedHerbs = unidentified.filter((n) => isEvidenceHerb(n));
     const unmatchedOther = unidentified.filter((n) => !isEvidenceHerb(n));
     if (unmatchedOther.length) {
