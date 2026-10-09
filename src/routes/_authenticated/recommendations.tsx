@@ -71,7 +71,7 @@ function Recommendations() {
     );
   }
 
-  const recs = report.recommendations.map((r) => (r.title.includes(" × ") || /Record \d+/.test(r.detail) ? r : neutralRecommendation(r)));
+  const recs = report.recommendations.map((r) => (report.interactions.some((i) => i.source === "evidence-table" && r.title === `${i.a} + ${i.b}`) ? r : neutralRecommendation(r)));
   const actions = recs.filter((r) => r.kind === "action");
   const monitors = recs.filter((r) => r.kind === "monitor");
   const alternatives = recs.filter((r) => r.kind === "alternative");
