@@ -21,6 +21,7 @@ import { summarizeClinicalRisk } from "@/lib/medical";
 import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
 import { PatientContext } from "@/components/PatientContext";
 import { sanitizeAgeNotes } from "@/lib/ageContext";
+import { neutralInteractionAdvice, neutralNote } from "@/lib/safeWording";
 import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL } from "@/lib/hdi";
 import { EvidenceChip } from "@/components/EvidenceChip";
 import { EvidenceChainGraph } from "@/components/EvidenceChainGraph";
@@ -145,7 +146,7 @@ function Results() {
       : statusLevel === "moderate"
         ? "Clinical review recommended — moderate drug–drug findings present."
         : "No major clinical risk detected from drug–drug / drug–condition findings.";
-  const warnings = sanitizeAgeNotes(report.warnings, report.patient.age);
+  const warnings = sanitizeAgeNotes(report.warnings, report.patient.age).map(neutralNote);
 
   const patient = report.patient;
   const patientBits = [
@@ -407,8 +408,8 @@ function Results() {
                   <p className="text-sm text-foreground/80">{i.summary}</p>
                   )}
                   <p className="mt-3 text-sm font-medium">
-                    <span className="text-muted-foreground">Action: </span>
-                    {i.advice}
+                    <span className="text-muted-foreground">{i.source === "evidence-table" ? "Action: " : "Note: "}</span>
+                    {i.source === "evidence-table" ? i.advice : neutralInteractionAdvice(i)}
                   </p>
                   <div className="text-muted-foreground mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
                     <span>{i.kind === "drug-drug" ? "Drug-Drug Interaction" : i.kind === "herb-drug" ? "Herb-Drug Interaction (evidence table)" : i.kind.replace("-", " ")}</span>

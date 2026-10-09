@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
 import { EvidenceChip } from "@/components/EvidenceChip";
+import { neutralRecommendation } from "@/lib/safeWording";
 import { getReport, getReports, type Report } from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/recommendations")({
@@ -70,9 +71,10 @@ function Recommendations() {
     );
   }
 
-  const actions = report.recommendations.filter((r) => r.kind === "action");
-  const monitors = report.recommendations.filter((r) => r.kind === "monitor");
-  const alternatives = report.recommendations.filter((r) => r.kind === "alternative");
+  const recs = report.recommendations.map((r) => (r.title.includes(" × ") || /Record \d+/.test(r.detail) ? r : neutralRecommendation(r)));
+  const actions = recs.filter((r) => r.kind === "action");
+  const monitors = recs.filter((r) => r.kind === "monitor");
+  const alternatives = recs.filter((r) => r.kind === "alternative");
   const safePairs = report.interactions.filter((i) => i.severity === "safe");
 
   return (
