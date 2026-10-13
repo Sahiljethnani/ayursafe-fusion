@@ -143,6 +143,10 @@ export const CANONICAL_MEDICINES: CanonicalEntry[] = [
   { canonical: "Fenugreek", kind: "herb", class: "hypoglycemic-herb", aliases: ["methi", "trigonella"] },
   { canonical: "Punarnava", kind: "herb", class: "diuretic-herb", aliases: ["boerhavia diffusa"] },
   { canonical: "Jatamansi", kind: "herb", class: "sedative-herb", aliases: ["nardostachys jatamansi"] },
+  { canonical: "Green Tea", kind: "herb", class: "herbal-product", aliases: ["camellia sinensis", "green tea extract", "egcg"] },
+  { canonical: "Ginseng", kind: "herb", class: "herbal-product", aliases: ["panax ginseng", "korean ginseng", "asian ginseng", "american ginseng", "panax quinquefolius"] },
+  { canonical: "Chamomile", kind: "herb", class: "herbal-product", aliases: ["matricaria chamomilla", "matricaria recutita", "german chamomile", "chamomile tea"] },
+  { canonical: "Piperine", kind: "herb", class: "herbal-product", aliases: ["piper nigrum", "black pepper", "black pepper extract", "bioperine", "kali mirch"] },
   { canonical: "Mandukaparni", kind: "herb", class: "nootropic", aliases: ["centella asiatica", "gotu kola"] },
 ];
 
@@ -460,7 +464,7 @@ export function computeSafetyScore(
   }
   if (unknownCount) {
     score -= unknownCount * 3;
-    breakdown.push(`${unknownCount} unidentified medicine${unknownCount > 1 ? "s" : ""} (uncertainty): −${unknownCount * 3}`);
+    breakdown.push(`${unknownCount} unresolved medicine entr${unknownCount > 1 ? "ies" : "y"} (uncertainty, −3 each): −${unknownCount * 3}`);
   }
   score = Math.max(5, Math.min(100, Math.round(score)));
   breakdown.push(`Final score: ${score}/100`);

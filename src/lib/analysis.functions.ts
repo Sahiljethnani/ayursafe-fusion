@@ -371,7 +371,9 @@ export const analyzePrescription = createServerFn({ method: "POST" })
       (x, y) => severityRank(y.severity) - severityRank(x.severity),
     );
 
-    const unidentified = medicines.filter((m) => !m.canonical).map((m) => m.raw);
+    // Recognized herbs (evidence-table herbs) are not "unidentified" just because they are absent from the drug dictionary.
+    for (const m of medicines) if (!m.canonical && isEvidenceHerb(m.raw)) m.kind = "herb";
+    const unidentified = medicines.filter((m) => !m.canonical && !isEvidenceHerb(m.raw)).map((m) => m.raw);
     const { score, level, breakdown, explanation } = summarizeClinicalRisk(interactions, unidentified.length);
 
     const recommendations: Recommendation[] = [];
@@ -395,7 +397,7 @@ export const analyzePrescription = createServerFn({ method: "POST" })
     }
 
     const warnings: string[] = sanitizeAgeNotes(strList(aiPayload?.patient_notes) ?? [], patient.age).map(neutralNote);
-    const unmatchedHerbs = unidentified.filter((n) => isEvidenceHerb(n));
+    const unmatchedHerbs = medicines.filter((m) => !m.canonical && isEvidenceHerb(m.raw)).map((m) => m.raw);
     const unmatchedOther = unidentified.filter((n) => !isEvidenceHerb(n));
     if (unmatchedOther.length) {
       warnings.unshift(
