@@ -22,7 +22,7 @@ import { HdiEvidenceSummary } from "@/components/HdiEvidenceSummary";
 import { PatientContext } from "@/components/PatientContext";
 import { sanitizeAgeNotes } from "@/lib/ageContext";
 import { neutralInteractionAdvice, neutralNote } from "@/lib/safeWording";
-import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL } from "@/lib/hdi";
+import { isEvidenceHerb, evidenceStatus, HDI_SOURCE_LABEL, hdiCounts } from "@/lib/hdi";
 import { EvidenceChip } from "@/components/EvidenceChip";
 import { EvidenceChainGraph } from "@/components/EvidenceChainGraph";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
@@ -98,7 +98,7 @@ function Results() {
     };
   }, [id]);
 
-  const clin = useMemo(() => (report ? summarizeClinicalRisk(report.interactions, report.unidentified?.length ?? 0) : null), [report]);
+  const clin = useMemo(() => (report ? summarizeClinicalRisk(report.interactions, (report.unidentified ?? []).filter((n) => !isEvidenceHerb(n)).length) : null), [report]);
   const ringColor = useMemo(() => {
     if (!clin) return "var(--muted)";
     return clin.level === "safe"
@@ -146,6 +146,17 @@ function Results() {
       : statusLevel === "moderate"
         ? "Clinical review recommended — moderate drug–drug findings present."
         : "No major clinical risk detected from drug–drug / drug–condition findings.";
+  const hc = hdiCounts(graphHerbs, graphDrugs);
+  const recs = (r: (string | number)[]) => (r.length ? ` (${r.map((x) => `R${x}`).join(", ")})` : "");
+  const pl = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const countLines = [
+    `Confirmed HDI: ${pl(hc.confirmed.pairs, "pair")} · ${pl(hc.confirmed.records.length, "unique record")}${recs(hc.confirmed.records)}`,
+    `Mixed / conflicting: ${pl(hc.mixed.pairs, "pair")} · ${pl(hc.mixed.records.length, "unique record")}${recs(hc.mixed.records)}`,
+    `No significant human effect: ${pl(hc.noEffect.pairs, "pair")} · ${pl(hc.noEffect.records.length, "unique record")}${recs(hc.noEffect.records)}`,
+    `No-match herb–drug pairs: ${hc.noMatchPairs}`,
+    `Total unique evidence records (all matched categories): ${hc.totalRecords}`,
+    `Drug–drug interactions requiring clinical review: ${clin.ddiReview}${clin.otherReview ? ` · Drug–condition / allergy findings: ${clin.otherReview}` : ""}`,
+  ];
   const warnings = sanitizeAgeNotes(report.warnings, report.patient.age).map(neutralNote);
 
   const patient = report.patient;
@@ -217,10 +228,12 @@ function Results() {
           <p className="text-muted-foreground mb-2 text-[11px] font-bold uppercase tracking-wider">Clinical Risk Summary</p>
           <RiskBadge level={statusLevel} size="lg" variant="clinical" />
           <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{headline}</h2>
-          <p className="mt-2 text-muted-foreground">{clin.explanation}</p>
+          <ul className="mt-2 space-y-0.5 text-sm text-muted-foreground">
+            {countLines.map((l) => <li key={l}>{l}</li>)}
+          </ul>
           <p className="text-muted-foreground mt-1 text-xs">The score covers drug–drug and drug–condition findings only. Herb–drug evidence findings are reported separately using evidence status and evidence level.</p>
           <div className="mt-5 grid grid-cols-3 gap-3">
-            <Stat label="Evidence-based HDI" value={clin.hdiConfirmed} tone="safe" />
+            <Stat label="Confirmed HDI pairs" value={hc.confirmed.pairs} tone="safe" />
             <Stat label="Moderate DDI" value={counts.moderate} tone="warn" />
             <Stat label="High-risk DDI" value={counts.high} tone="danger" />
           </div>
@@ -289,7 +302,7 @@ function Results() {
               <li key={`${m.raw}-${idx}`} className="flex items-start justify-between gap-3 py-3 first:pt-0">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-sm font-semibold">
-                    {m.kind === "herb" ? (
+                    {m.kind === "herb" || (!m.canonical && isEvidenceHerb(m.raw)) ? (
                       <Leaf className="text-primary h-3.5 w-3.5 shrink-0" />
                     ) : m.kind === "drug" ? (
                       <Pill className="text-trust h-3.5 w-3.5 shrink-0" />
@@ -309,14 +322,14 @@ function Results() {
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    m.kind === "unknown"
+                    m.kind === "unknown" && !isEvidenceHerb(m.raw)
                       ? "bg-muted text-muted-foreground"
                       : m.kind === "herb"
                         ? "bg-primary/12 text-primary"
                         : "bg-trust/12 text-trust"
                   }`}
                 >
-                  {m.kind === "unknown" ? "Unmatched" : m.kind === "herb" ? "Herbal" : "Drug"}
+                  {m.kind === "herb" || isEvidenceHerb(m.canonical ?? m.raw) ? "Recognized herbal product" : m.kind === "unknown" ? "Unidentified" : "Recognized medicine"}
                 </span>
               </li>
             ))}

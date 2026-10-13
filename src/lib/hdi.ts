@@ -176,3 +176,19 @@ export function tier(ev: HdiEvidence): HdiRisk {
 export function evidenceStatus(ev: { category: HdiCategory }) {
   return ev.category === "confirmed" ? "Evidence-supported interaction" : ev.category === "mixed" ? "Mixed / Conflicting Evidence" : "No significant human effect";
 }
+
+/** Presentation counts: pair counts and unique record counts kept distinct per category. Does not alter matching. */
+export function hdiCounts(herbs: string[], drugs: string[]) {
+  const { matches, unmatched } = evaluateHdi(herbs, drugs);
+  const by = (c: HdiCategory) => {
+    const ms = matches.filter((m) => m.ev.category === c);
+    const pairs = new Set(ms.map((m) => `${m.herb}|${m.drug}`)).size;
+    const records = Array.from(new Set(ms.map((m) => m.ev.id))).sort((a, b) => Number(a) - Number(b));
+    return { pairs, records };
+  };
+  const confirmed = by("confirmed");
+  const mixed = by("mixed");
+  const noEffect = by("no-effect");
+  const totalRecords = new Set(matches.map((m) => m.ev.id)).size;
+  return { confirmed, mixed, noEffect, noMatchPairs: unmatched.length, totalRecords };
+}
