@@ -31,5 +31,3 @@ This folder contains the official project documentation, reports, and presentati
   - **Description**: Editable PowerPoint presentation deck for Group 38 Review-I.
 - [`AyurSafe_Group38_Capstone_Review1.pdf`](./presentations/AyurSafe_Group38_Capstone_Review1.pdf)
   - **Description**: PDF export of Group 38 Capstone Project Review-I presentation.
-- [`Vision_Learn_Review1_Template.pdf`](./presentations/Vision_Learn_Review1_Template.pdf)
-  - **Description**: Reference PPT review format template.
